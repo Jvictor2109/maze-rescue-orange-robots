@@ -1,6 +1,14 @@
 import cv2
 from picamera2 import Picamera2
 
+# CONSTANTES
+BLOCKSIZE = 81
+C_THRESH = 20
+AREA_MINIMA = 3000
+SOLIDEZ_MINIMA = 0.6
+
+
+
 # Inicia a câmera e define a resolução de imagem
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(
@@ -21,7 +29,7 @@ while True:
     blur = cv2.GaussianBlur(gray, (5,5), 0)
 
     # Threshold adaptiva
-    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 81, 20)
+    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, BLOCKSIZE, C_THRESH)
 
     # Econtra os contornos da imagem
     contornos, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -30,7 +38,7 @@ while True:
         area = cv2.contourArea(cnt)
         
         # 1. Filtro de tamanho para ignorar sujeira
-        if area > 3000: 
+        if area > AREA_MINIMA: 
             x, y, w, h = cv2.boundingRect(cnt)
             
             # 2. Recorta a letra e calcula a Solidez
@@ -41,7 +49,7 @@ while True:
             # --- LÓGICA DE DECISÃO ---
             
             # O 'S' é o mais "sólido/preenchido" de todos
-            if solidez > 0.6:
+            if solidez > SOLIDEZ_MINIMA:
                 vitima = "S"
                 print(vitima)
             
