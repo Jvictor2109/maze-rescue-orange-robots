@@ -1,18 +1,18 @@
 import cv2
+from picamera2 import Picamera2
 
 # Inicia a câmera e define a resolução de imagem
-cap = cv2.VideoCapture(0)
-cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(
+    main={"format": "RGB888", "size": (320, 240)}
+))
+picam2.start()
 
 print("Pressione q pra sair")
 
 while True:
     # Captura a imagem
-    sucesso,frame = cap.read()
-    if not sucesso:
-        print("Deu erro")
-        break
+    frame = picam2.capture_array()
     
     # Colocar imagem em escala de cinza
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
