@@ -21,7 +21,7 @@ while True:
     blur = cv2.GaussianBlur(gray, (5,5), 0)
 
     # Threshold adaptiva
-    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 51, 12)
+    thresh = cv2.adaptiveThreshold(blur, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 81, 20)
 
     # Econtra os contornos da imagem
     contornos, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -30,7 +30,7 @@ while True:
         area = cv2.contourArea(cnt)
         
         # 1. Filtro de tamanho para ignorar sujeira
-        if area > 2000: 
+        if area > 3000: 
             x, y, w, h = cv2.boundingRect(cnt)
             
             # 2. Recorta a letra e calcula a Solidez
@@ -41,7 +41,7 @@ while True:
             # --- LÓGICA DE DECISÃO ---
             
             # O 'S' é o mais "sólido/preenchido" de todos
-            if solidez > 0.63:
+            if solidez > 0.6:
                 vitima = "S"
                 print(vitima)
             
