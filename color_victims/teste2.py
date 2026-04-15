@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-import time
-from picamera2 import Picamera2
 
 class DetectorVitimas:
     def __init__(self):

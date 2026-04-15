@@ -1,1 +1,4 @@
-cv2-python
+opencv-python
+numpy
+pyserial
+picamera2
