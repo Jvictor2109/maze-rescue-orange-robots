@@ -3,7 +3,7 @@ import numpy as np
 from picamera2 import Picamera2
 
 # --- CONFIGURAÇÃO ---
-TEMPLATE_DIR = "templates/"   # pasta com H.png, S.png, U.png
+TEMPLATE_DIR = "/home/litch/Desktop/maze-rescue-orange-robots/letter victims/templates/"   # pasta com H.png, S.png, U.png
 ANGULOS = [0, 90, 180, 270]   # ângulos a testar (adiciona mais se necessário)
 THRESHOLD_MATCH = 0.6         # confiança mínima (ajustar experimentalmente)
 AREA_MINIMA = 3000            # ignora contornos pequenos (ruído)
@@ -11,7 +11,7 @@ BLOCKSIZE = 81
 C_THRESH = 20
 
 
-def carregar_templates(letras=["H", "S", "U"]):
+def carregar_templates(letras=["h", "s", "u"]):
     """Carrega e pré-processa os templates em escala de cinza."""
     templates = {}
     for letra in letras:
@@ -54,7 +54,7 @@ def classificar_roi(roi_gray, templates):
             # Template maior que ROI após resize não é possível de comparar
             if t_resized.shape[0] > roi_h or t_resized.shape[1] > roi_w:
                 continue
-
+            print(f"Template '{letra}' rotacao {angulo}: {t_resized.shape}")
             resultado = cv2.matchTemplate(roi_gray, t_resized, cv2.TM_CCOEFF_NORMED)
             _, score, _, _ = cv2.minMaxLoc(resultado)
 
@@ -96,8 +96,9 @@ while True:
             continue
 
         x, y, w, h = cv2.boundingRect(cnt)
-        roi_gray = gray[y:y+h, x:x+w]  # matching em cinza, não em thresh
 
+        roi_gray = gray[y:y+h, x:x+w]  # matching em cinza, não em thresh
+        print(f"ROI shape: {roi_gray.shape}")
         vitima, score = classificar_roi(roi_gray, templates)
 
         if vitima:

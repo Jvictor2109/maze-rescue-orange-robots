@@ -4,8 +4,8 @@ from picamera2 import Picamera2
 # CONSTANTES
 BLOCKSIZE = 81
 C_THRESH = 20
-AREA_MINIMA = 3000
-SOLIDEZ_MINIMA = 0.6
+AREA_MINIMA = 5000
+SOLIDEZ_MINIMA = 0.55
 
 
 
@@ -76,7 +76,7 @@ while True:
             # --- EXIBIÇÃO ---
             cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
             cv2.putText(frame, vitima, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-            print(f"Detectado: {vitima} | Solidez: {solidez:.2f}")
+            print(f"Detectado: {vitima} | Solidez: {solidez:.2f} | Área: {area}")
 
 
     # 6. Mostra as janelas na tela do Raspberry

@@ -1,7 +1,20 @@
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from color_victims.teste2 import DetectorVitimas
+from picamera2 import Picamera2
+import cv2
 # =======================================================
 # SIMULADOR DE EXPLORAÇÃO DE LABIRINTO (DFS ITERATIVO)
 # Focado em Robótica (Sem Recursão)
 # =======================================================
+
+detector = DetectorVitimas()
+picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(
+    main={"format": "RGB888", "size": (320, 240)}
+))
+picam2.start()
 
 def explorar_labirinto_robo_real():
     """
@@ -48,6 +61,22 @@ def explorar_labirinto_robo_real():
             parede_s = input("Parede ao Sul (Y-1)? [s/n]: ").strip().lower() == 's'
             parede_l = input("Parede ao Leste (X+1)? [s/n]: ").strip().lower() == 's'
             parede_o = input("Parede ao Oeste (X-1)? [s/n]: ").strip().lower() == 's'
+
+            # Tenta ler a cor
+            while True:
+                frame = picam2.capture_array()
+
+                cor, _ = detector.processar_frame(frame)
+
+                if cor:
+                    print(f"Cor achada: {cor}")
+                    break
+                
+                cv2.imshow("teste", frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+
+
             
             # Montamos uma lista das opções possíveis a partir desta célula
             # Prioridade de exploração: Norte, Sul, Leste, Oeste
