@@ -62,16 +62,18 @@ class SerialComm:
         return response
 
     def _simulate_send(self, command):
-        """Simulação via terminal."""
+        """Simulacao via terminal."""
         print(f"  >> {command}")
 
-        # Comandos de movimento/servo retornam OK automaticamente na simulação
-        # Apenas SENSOR ALL precisa de input do utilizador
         if command == "SENSOR ALL":
-            response = input("  << (frente,esq,dir — ex: 0,1,0): ").strip()
+            response = input("  << (frente,esq,dir - ex: 0,1,0): ").strip()
+            return response
+        elif command.startswith("SERVO"):
+            # SERVO espera OK manual — permite controlar quando a foto e tirada
+            response = input("  << (digite OK quando pronto): ").strip()
             return response
         else:
-            # Para MOVE/TURN/SERVO, simula resposta automática
+            # MOVE/TURN — resposta automatica
             print("  << OK")
             return "OK"
 
