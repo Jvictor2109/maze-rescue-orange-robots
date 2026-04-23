@@ -86,6 +86,9 @@ while True:
         print(f"Heading: {heading:.2f}")
 
     ax, ay, az = get_accel()
+    az_clamped = max(-1.0, min(1.0, az))
+    inclinacao = math.acos(az_clamped) * 180 / math.pi
     print(f"Acelerómetro: AX: {ax}, AY: {ay} AZ: {az}")
+    print(f"Inclinação: {inclinacao}º")
 
     time.sleep(3)
