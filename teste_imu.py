@@ -31,6 +31,13 @@ def get_gyro():
     scale = 131.0
     return gx/scale, gy/scale, gz/scale
 
+def get_accel():
+    ax = read_word_2c(ICM20600_ADDR, 0x3B)
+    ay = read_word_2c(ICM20600_ADDR, 0x3D)
+    az = read_word_2c(ICM20600_ADDR, 0x3F)
+    scale = 16384.0  # ±2g
+    return ax/scale, ay/scale, az/scale
+
 def get_mag():
     # Espera até dados estarem prontos (max 10 tentativas)
     for _ in range(10):
@@ -77,5 +84,8 @@ while True:
         heading = get_heading(mx, my)
         print(f"Mag - mx:{mx:.2f}, my:{my:.2f}: mz{mz:.2f}")
         print(f"Heading: {heading:.2f}")
+
+    ax, ay, az = get_accel()
+    print(f"Acelerómetro: AX: {ax}, AY: {ay} AZ: {az}")
 
     time.sleep(3)
