@@ -63,6 +63,17 @@ def get_heading(mx, my):
     heading = math.atan2(my, mx) * 180 / math.pi
     if heading < 0:
         heading += 360
+
+    if heading >= 0 and heading < 90:
+        return "N"  
+    elif heading >= 90 and heading < 180:
+        return "O"
+    elif heading >= 180 and heading < 270:
+        return "S"
+    elif heading >= 270:
+        return "E"
+
+    
     return heading
 
 # Integração do giroscópio para ângulo acumulado
