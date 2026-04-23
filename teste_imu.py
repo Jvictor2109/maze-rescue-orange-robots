@@ -32,13 +32,18 @@ def get_gyro():
     return gx/scale, gy/scale, gz/scale
 
 def get_mag():
-    # Verifica se dados estão prontos (DRDY bit)
-    status = bus.read_byte_data(AK09918_ADDR, 0x10)
-    if not (status & 0x01):
-        return None
+    # Espera até dados estarem prontos (max 10 tentativas)
+    for _ in range(10):
+        status = bus.read_byte_data(AK09918_ADDR, 0x10)
+        if status & 0x01:
+            break
+        time.sleep(0.01)
+    else:
+        return None  # timeout
+
     data = bus.read_i2c_block_data(AK09918_ADDR, 0x11, 6)
-    # Lê ST2 para libertar o buffer
-    bus.read_byte_data(AK09918_ADDR, 0x18)
+    bus.read_byte_data(AK09918_ADDR, 0x18)  # liberta buffer
+
     mx = (data[1] << 8) | data[0]
     my = (data[3] << 8) | data[2]
     mz = (data[5] << 8) | data[4]
