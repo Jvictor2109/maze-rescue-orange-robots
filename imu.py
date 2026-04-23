@@ -7,8 +7,18 @@ class IMU:
     ICM20600_ADDR = 0x69
     AK09918_ADDR  = 0x0C
 
-    def __init__(self, bus_number=1):
+    def __init__(self, bus_number=1,
+                 mag_offset=(0.0, 0.0),
+                 mag_scale=(1.0, 1.0)):
+        """
+        mag_offset: (offset_x, offset_y) — obtidos com calibrar_mag.py
+        mag_scale:  (scale_x, scale_y)   — obtidos com calibrar_mag.py
+        """
         self.bus = smbus2.SMBus(bus_number)
+
+        # Calibração do magnetómetro
+        self.mag_offset = mag_offset
+        self.mag_scale = mag_scale
 
         # Acorda ICM20600
         self.bus.write_byte_data(self.ICM20600_ADDR, 0x6B, 0x00)
@@ -59,19 +69,22 @@ class IMU:
         if mz >= 0x8000: mz -= 65536
         return mx * 0.15, my * 0.15, mz * 0.15
 
-    def get_heading(self, mx, my):
-        heading = math.atan2(my, mx) * 180 / math.pi
-        if heading < 0:
-            heading += 360
-        
-        if heading >= 0 and heading < 90:
-            return "N"  
-        elif heading >= 90 and heading < 180:
-            return "O"
-        elif heading >= 180 and heading < 270:
-            return "S"
-        elif heading >= 270:
-            return "E"
+    def get_heading(self):
+        """Lê o magnetómetro, aplica calibração, e devolve (graus, direção)."""
+        mag = self.get_mag()
+        if mag is None:
+            return None, None
 
-        return heading
-    
+        mx, my, _ = mag
+
+        # Aplicar calibração: remover offset e corrigir escala
+        mx_cal = (mx - self.mag_offset[0]) * self.mag_scale[0]
+        my_cal = (my - self.mag_offset[1]) * self.mag_scale[1]
+
+        heading = math.atan2(my_cal, mx_cal) * 180 / math.pi
+        heading = heading % 360
+
+        pos = ["N", "O", "S", "E"][int(heading // 90) % 4]
+
+        return heading, pos
+
