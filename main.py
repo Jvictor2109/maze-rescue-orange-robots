@@ -157,6 +157,7 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
             print(f"  [COR] Vitima de COR detectada ({lado}): {cor} - Kits: {kits}")
             serial.send(f"VICTIM COLOR {cor}")
             victims.append(("cor", cor, kits))
+            
 
         # Deteccao de letra
         letra = letter_detector.detect(frame)
