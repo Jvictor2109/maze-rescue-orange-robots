@@ -65,16 +65,16 @@ def get_heading(mx, my):
         heading += 360
 
     if heading >= 0 and heading < 90:
-        return "N"  
+        pos = "N"  
     elif heading >= 90 and heading < 180:
-        return "O"
+        pos = "O"
     elif heading >= 180 and heading < 270:
-        return "S"
+        pos = "S"
     elif heading >= 270:
-        return "E"
+        pos = "E"
 
     
-    return heading
+    return heading, pos
 
 # Integração do giroscópio para ângulo acumulado
 angle_z = 0.0
@@ -92,14 +92,16 @@ while True:
     mag = get_mag()
     if mag:
         mx, my, mz = mag
-        heading = get_heading(mx, my)
+        heading, pos = get_heading(mx, my)
         print(f"Mag - mx:{mx:.2f}, my:{my:.2f}: mz{mz:.2f}")
         print(f"Heading: {heading:.2f}")
+        print(f"Posição: {pos}")
 
     ax, ay, az = get_accel()
     az_clamped = max(-1.0, min(1.0, az))
     inclinacao = math.acos(az_clamped) * 180 / math.pi
     print(f"Acelerómetro: AX: {ax}, AY: {ay} AZ: {az}")
     print(f"Inclinação: {inclinacao:.2f}º")
+    print()
 
     time.sleep(3)
