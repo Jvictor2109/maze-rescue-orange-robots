@@ -68,15 +68,14 @@ while True:
     last_time = now
 
     gx, gy, gz = get_gyro()
-    angle_z += gz * dt  # integra gz para obter ângulo acumulado
+
+    print(f"Gyro - x:{gx}, y:{gy}, z:{gz}")
 
     mag = get_mag()
     if mag:
         mx, my, mz = mag
         heading = get_heading(mx, my)
-        print(f"Gyro (°/s):     x={gx:.2f} y={gy:.2f} z={gz:.2f}")
-        print(f"Ângulo Z (°):   {angle_z:.2f}")
-        print(f"Heading (°):    {heading:.1f}")
-        print("---")
+        print(f"Mag - mx:{mx}, my:{my}: mz{mz}")
+        print(f"Heading: {heading}")
 
     time.sleep(0.05)
