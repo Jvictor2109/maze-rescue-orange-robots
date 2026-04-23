@@ -78,4 +78,4 @@ while True:
         print(f"Mag - mx:{mx:.2f}, my:{my:.2f}: mz{mz:.2f}")
         print(f"Heading: {heading:.2f}")
 
-    time.sleep(0.05)
+    time.sleep(3)
