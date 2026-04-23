@@ -25,6 +25,14 @@ EAST = 1
 SOUTH = 2
 WEST = 3
 
+# =====================================================================
+# CONSTANTES DE PROTOCOLO
+# =====================================================================
+CELL_DISTANCE_CM = 30.0       # Distancia de uma celula em cm (encoder)
+WALL_THRESHOLD_CM = 5.0       # Distancia <= 5cm = parede (ultrassonico)
+MOTOR_SPEED = 100              # Velocidade padrao dos motores
+DR_POLL_INTERVAL = 0.05        # 50ms entre leituras de encoder
+
 DIRECTION_NAME = {NORTH: "Norte", EAST: "Leste", SOUTH: "Sul", WEST: "Oeste"}
 DIRECTION_DELTA = {
     NORTH: (0, 1),
@@ -82,25 +90,31 @@ def calculate_turn(current_heading, target_direction):
 
 def read_walls(heading, serial):
     """
-    Le os sensores e mapeia para direcoes absolutas.
+    Le os sensores ultrasonicos e mapeia para direcoes absolutas.
     
-    Envia SENSOR ALL -> recebe 'frente,esquerda,direita' (0=livre, 1=parede)
-    Converte para dicionario {direcao_absoluta: bool_tem_parede}
+    Envia SA -> recebe 'esq,frente,dir' (distancias em cm)
+    Parede = distancia <= WALL_THRESHOLD_CM
     
     Returns:
         dict com 4 direcoes: {NORTH: True/False, EAST: True/False, ...}
     """
-    response = serial.send("SENSOR ALL")
+    response = serial.send("SA")
 
     try:
         parts = response.split(",")
-        front_wall = int(parts[0].strip()) == 1
-        left_wall = int(parts[1].strip()) == 1
-        right_wall = int(parts[2].strip()) == 1
+        left_dist = float(parts[0].strip())
+        front_dist = float(parts[1].strip())
+        right_dist = float(parts[2].strip())
     except (ValueError, IndexError):
         print(f"[ERRO] Resposta invalida dos sensores: '{response}'")
-        print("       Formato esperado: 0,1,0 (frente,esq,dir)")
+        print("       Formato esperado: 15,45,12 (esq,frente,dir em cm)")
         return None
+
+    left_wall = left_dist <= WALL_THRESHOLD_CM
+    front_wall = front_dist <= WALL_THRESHOLD_CM
+    right_wall = right_dist <= WALL_THRESHOLD_CM
+
+    print(f"  [SA] Distancias: esq={left_dist:.1f}cm frente={front_dist:.1f}cm dir={right_dist:.1f}cm")
 
     walls = {}
     walls[relative_to_absolute(heading, "front")] = front_wall
@@ -133,7 +147,7 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
     for servo_cmd, lado in servo_positions:
         # Envia comando de servo e espera OK (confirma que o servo posicionou)
         serial.send(servo_cmd)
-
+        time.sleep(1)
         # Captura um unico frame apos confirmacao
         frame = camera.capture_array()
 
@@ -161,6 +175,47 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
 # NAVEGACAO + MOVIMENTACAO
 # =====================================================================
 
+def move_forward(serial):
+    """
+    Avanca o robo uma celula usando controlo direto de motores + encoders.
+    
+    Sequencia:
+        1. MC 100 100 100 100  (liga motores)
+        2. Poll DR ate media dos encoders >= CELL_DISTANCE_CM
+        3. MC 0 0 0 0  (para motores)
+    
+    Returns:
+        resposta: 'OK', 'BLACK' ou 'BLUE' (BLACK/BLUE placeholder por agora)
+    """
+    # 1. Liga motores
+    speed = MOTOR_SPEED
+    serial.send(f"MC {speed} {speed} {speed} {speed}")
+
+    # 2. Poll encoders ate atingir distancia de uma celula
+    while True:
+        response = serial.send("DR")
+        try:
+            values = [float(v.strip()) for v in response.split(",")]
+            avg_distance = sum(values) / len(values)
+        except (ValueError, IndexError):
+            print(f"[ERRO] Resposta DR invalida: '{response}'")
+            avg_distance = 0.0
+
+        if avg_distance >= CELL_DISTANCE_CM:
+            break
+
+        time.sleep(DR_POLL_INTERVAL)
+
+    # 3. Para motores
+    serial.send("MC 0 0 0 0")
+
+    # Placeholder: deteccao de tiles pretos/azuis pelo sensor de chao
+    # TODO: implementar quando sensor de chao estiver ligado ao Raspberry Pi
+    tile_response = "OK"
+
+    return tile_response
+
+
 def move_to_direction(heading, target_dir, serial):
     """
     Vira o robo para a direcao target_dir e avanca uma celula.
@@ -171,17 +226,17 @@ def move_to_direction(heading, target_dir, serial):
         serial: Instancia de SerialComm
     
     Returns:
-        Novo heading apos o movimento
+        (novo_heading, resposta) — resposta pode ser 'OK', 'BLACK' ou 'BLUE'
     """
     # Calcula e executa turns
     turns, new_heading = calculate_turn(heading, target_dir)
     for turn_cmd in turns:
         serial.send(turn_cmd)
 
-    # Avanca
-    serial.send("MOVE FORWARD")
+    # Avanca uma celula com controlo direto
+    response = move_forward(serial)
 
-    return new_heading
+    return new_heading, response
 
 
 def direction_between(from_pos, to_pos):
@@ -219,6 +274,8 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
     visitados.add((0, 0))
     memoria_mapa = {}  # {(x,y): [(dir_absoluta, dx, dy), ...]}
     vitimas_encontradas = []  # Registo global de vitimas
+    tiles_bloqueados = set()  # Tiles pretos/intransponiveis (tratados como parede)
+    tiles_azuis = []  # Posicoes de tiles azuis encontrados
 
     print("\n" + "=" * 50)
     print("[ROBO] MAZE RESCUE - Exploracao Iniciada")
@@ -277,12 +334,30 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
             prox_x = atual_x + dx
             prox_y = atual_y + dy
 
+            # Verifica se o tile esta bloqueado (preto detectado anteriormente)
+            if (prox_x, prox_y) in tiles_bloqueados:
+                print(f"  [X] {DIRECTION_NAME[direcao]} -> ({prox_x}, {prox_y}) - BLOQUEADO (tile preto)")
+                continue
+
             if (prox_x, prox_y) not in visitados:
                 print(f"\n-> Avancando para {DIRECTION_NAME[direcao]} -> ({prox_x}, {prox_y})")
 
                 # Move o robo fisicamente
-                heading = move_to_direction(heading, direcao, serial)
+                heading, response = move_to_direction(heading, direcao, serial)
 
+                # Verifica resposta do ESP32
+                if response == "BLACK":
+                    print(f"  [BLACK] Tile preto em ({prox_x}, {prox_y})! Robo retornou automaticamente.")
+                    tiles_bloqueados.add((prox_x, prox_y))
+                    # Robo ja voltou ao tile atual — heading mantem-se, posicao nao muda
+                    continue
+
+                elif response == "BLUE":
+                    print(f"  [BLUE] Tile azul em ({prox_x}, {prox_y})! Info guardada.")
+                    tiles_azuis.append((prox_x, prox_y))
+                    # Robo avancou com sucesso — continua exploracao a partir daqui
+
+                # OK — movimento bem-sucedido
                 visitados.add((prox_x, prox_y))
                 pilha_caminho.append((prox_x, prox_y))
                 moveu = True
@@ -307,7 +382,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 )
 
                 # Move fisicamente
-                heading = move_to_direction(heading, target_dir, serial)
+                heading, _ = move_to_direction(heading, target_dir, serial)
 
     # -------------------------------------------------
     # FINALIZACAO
@@ -315,7 +390,14 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
     print("\n" + "=" * 50)
     print("[FIM] EXPLORACAO CONCLUIDA!")
     print(f"   Celulas mapeadas: {len(visitados)}")
+    print(f"   Tiles bloqueados (pretos): {len(tiles_bloqueados)}")
+    print(f"   Tiles azuis: {len(tiles_azuis)}")
     print(f"   Vitimas encontradas: {len(vitimas_encontradas)}")
+
+    if tiles_azuis:
+        print("\n   Tiles azuis encontrados:")
+        for pos in tiles_azuis:
+            print(f"     ({pos[0]}, {pos[1]})")
 
     if vitimas_encontradas:
         print("\n   Registo de vitimas:")
@@ -357,6 +439,12 @@ def main():
         baudrate=args.baudrate,
         simulate=args.simulate,
     )
+
+    # Handshake — verifica conexão com ESP32 antes de tudo
+    if not serial.ping():
+        print("[FATAL] Não foi possível comunicar com o ESP32. A encerrar.")
+        serial.close()
+        sys.exit(1)
 
     # Camera e detectores
     camera = None
