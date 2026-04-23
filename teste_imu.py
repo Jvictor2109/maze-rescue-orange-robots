@@ -64,16 +64,9 @@ def get_heading(mx, my):
     if heading < 0:
         heading += 360
 
-    if heading >= 0 and heading < 90:
-        pos = "N"  
-    elif heading >= 90 and heading < 180:
-        pos = "O"
-    elif heading >= 180 and heading < 270:
-        pos = "S"
-    elif heading >= 270:
-        pos = "E"
+    heading = heading % 360
+    pos = ["N", "O", "S", "E"][int(heading // 90) % 4]
 
-    
     return heading, pos
 
 # Integração do giroscópio para ângulo acumulado
