@@ -69,13 +69,13 @@ while True:
 
     gx, gy, gz = get_gyro()
 
-    print(f"Gyro - x:{gx}, y:{gy}, z:{gz}")
+    print(f"Gyro - x:{gx:.2f}, y:{gy:.2f}, z:{gz:.2f}")
 
     mag = get_mag()
     if mag:
         mx, my, mz = mag
         heading = get_heading(mx, my)
-        print(f"Mag - mx:{mx}, my:{my}: mz{mz}")
-        print(f"Heading: {heading}")
+        print(f"Mag - mx:{mx:.2f}, my:{my:.2f}: mz{mz:.2f}")
+        print(f"Heading: {heading:.2f}")
 
     time.sleep(0.05)
