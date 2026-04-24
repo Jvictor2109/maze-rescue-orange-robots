@@ -23,7 +23,7 @@ WEST = 3
 # =====================================================================
 CELL_DISTANCE_CM = 30.0       # Distancia de uma celula em cm (encoder)
 WALL_THRESHOLD_CM = 15.0      # Distancia <= threshold = parede (ultrassonico)
-MOTOR_SPEED = 40        # Velocidade padrao dos motores
+MOTOR_SPEED = 30        # Velocidade padrao dos motores
 DR_POLL_INTERVAL = 0.05       # 50ms entre leituras de encoder
 
 # Convencao standard: N=+Y, E=+X, S=-Y, W=-X
@@ -42,7 +42,7 @@ DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 DIRECTION_ANGLE = {NORTH: 0.0, EAST: 90.0, SOUTH: 180.0, WEST: 270.0}
 
 # Constantes de controlo de rotacao
-TURN_TOLERANCE =30.0         # graus — para motores quando dentro desta margem
+TURN_TOLERANCE = 10         # graus — para motores quando dentro desta margem
 TURN_SLOW_ZONE = 30.0         # graus — reduz velocidade quando proximo do alvo
 TURN_SPEED_FAST = 30
 TURN_SPEED_SLOW = 18
