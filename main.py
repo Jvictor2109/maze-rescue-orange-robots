@@ -264,8 +264,8 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
             
             # 3. Montar opcoes livres (direcoes absolutas sem parede e nao visitadas)
             opcoes_livres = []
-            # Prioridade: Norte, Leste, Sul, Oeste
-            for d in [NORTH, EAST, SOUTH, WEST]:
+            # Prioridade: Leste, Norte, Sul, Oeste
+            for d in [EAST, NORTH, SOUTH, WEST]:
                 if not walls[d]:
                     dx, dy = DIRECTION_DELTA[d]
                     opcoes_livres.append((d, dx, dy))
