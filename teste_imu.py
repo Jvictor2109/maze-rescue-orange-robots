@@ -64,8 +64,7 @@ def get_heading(mx, my):
     if heading < 0:
         heading += 360
 
-    heading = heading % 360
-    pos = ["N", "O", "S", "E"][int(heading // 90) % 4]
+    pos = "nada"
 
     return heading, pos
 
