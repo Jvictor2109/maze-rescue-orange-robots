@@ -214,10 +214,10 @@ def turn_to(target_dir, serial):
 
         if diff > 0:
             # Virar direita
-            serial.send(f"MC {speed} -{speed} {speed} -{speed}")
+            serial.send(f"MC -{speed} {speed} -{speed} {speed}")
         else:
             # Virar esquerda
-            serial.send(f"MC -{speed} {speed} -{speed} {speed}")
+            serial.send(f"MC {speed} -{speed} {speed} -{speed}")
 
         time.sleep(0.02)
 
