@@ -1,12 +1,3 @@
-"""
-Main - Robo Maze Rescue
-Integra navegacao DFS, deteccao de vitimas (cor + letra), e comunicacao serial.
-
-Uso:
-  Simulacao (sem hardware):  python main.py --simulate --no-camera
-  Simulacao (com camera):    python main.py --simulate
-  Real:                      python main.py --port COM3
-"""
 
 from multiprocessing import popen_fork
 import argparse
@@ -57,13 +48,6 @@ imu = IMU(
 # =====================================================================
 
 def relative_to_absolute(heading, relative):
-    """
-    Converte direcao relativa ao robo para direcao absoluta no mapa.
-    
-    Args:
-        heading: Orientacao atual (NORTH/EAST/SOUTH/WEST)
-        relative: 'front', 'left', 'right'
-    """
     offsets = {"front": 0, "left": -1, "right": 1, "back": 2}
     return (heading + offsets[relative]) % 4
 
@@ -73,15 +57,6 @@ def relative_to_absolute(heading, relative):
 # =====================================================================
 
 def read_walls(heading, serial):
-    """
-    Le os sensores ultrasonicos e mapeia para direcoes absolutas.
-    
-    Envia SA -> recebe 'esq,frente,dir' (distancias em cm)
-    Parede = distancia <= WALL_THRESHOLD_CM
-    
-    Returns:
-        dict com 4 direcoes: {NORTH: True/False, EAST: True/False, ...}
-    """
     response = serial.send("SR")
 
     try:
@@ -115,12 +90,6 @@ def read_walls(heading, serial):
 # =====================================================================
 
 def check_victims_in_cell(serial, camera, color_detector, letter_detector):
-    """
-    Verifica vitimas nos 3 lados (frente, esquerda, direita) usando o servo da camera.
-    
-    Returns:
-        Lista de vitimas encontradas: [('cor', 'VERMELHO', 2), ('letra', 'H'), ...]
-    """
     victims = []
     servo_positions = [
         ("SERVO CENTER", "frente"),
@@ -162,29 +131,28 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
 # =====================================================================
 
 def move_forward(serial):
-    """
-    Avanca o robo uma celula usando controlo direto de motores + encoders.
-    
-    Sequencia:
-        1. MC 100 100 100 100  (liga motores)
-        2. Poll DR ate media dos encoders >= CELL_DISTANCE_CM
-        3. MC 0 0 0 0  (para motores)
-    
-    Returns:
-        resposta: 'OK', 'BLACK' ou 'BLUE' (BLACK/BLUE placeholder por agora)
-    """
-    # 1. Liga motores
+    # 1. Ler encoder ANTES de ligar motores (valor base)
     speed = MOTOR_SPEED
+    baseline_response = serial.send("MR")
+    try:
+        baseline = [float(v.strip()) for v in baseline_response.split(",")]
+    except (ValueError, IndexError):
+        print(f"[ERRO] Leitura base do encoder invalida: '{baseline_response}'")
+        baseline = [0.0, 0.0, 0.0, 0.0]
+
+    # 2. Liga motores
     serial.send(f"MC {speed} {speed} {speed} {speed}")
 
-    # 2. Poll encoders ate atingir distancia de uma celula
+    # 3. Poll encoders ate atingir distancia de uma celula
     while True:
         response = serial.send("MR")
         try:
             values = [float(v.strip()) for v in response.split(",")]
-            avg_distance = sum(values) / len(values)
+            # Distancia percorrida = leitura atual - leitura base
+            deltas = [v - b for v, b in zip(values, baseline)]
+            avg_distance = sum(deltas) / len(deltas)
         except (ValueError, IndexError):
-            print(f"[ERRO] Resposta DR invalida: '{response}'")
+            print(f"[ERRO] Resposta MR invalida: '{response}'")
             avg_distance = 0.0
 
         if avg_distance >= CELL_DISTANCE_CM:
@@ -230,17 +198,6 @@ def turn_to(target_dir, serial):
 
 
 def move_to_direction(target_dir, serial):
-    """
-    Vira o robo para a direcao target_dir e avanca uma celula.
-    
-    Args:
-        heading: Heading atual
-        target_dir: Direcao absoluta desejada (NORTH/EAST/SOUTH/WEST)
-        serial: Instancia de SerialComm
-    
-    Returns:
-        (novo_heading, resposta) — resposta pode ser 'OK', 'BLACK' ou 'BLUE'
-    """
     # Calcula e executa turns
     turn_to(target_dir, serial)
     # Avanca uma celula com controlo direto
@@ -250,12 +207,6 @@ def move_to_direction(target_dir, serial):
 
 
 def direction_between(from_pos, to_pos):
-    """
-    Calcula a direcao absoluta para ir de from_pos para to_pos (celulas adjacentes).
-    
-    Returns:
-        Direcao absoluta (NORTH/EAST/SOUTH/WEST)
-    """
     dx = to_pos[0] - from_pos[0]
     dy = to_pos[1] - from_pos[1]
     return DELTA_TO_DIR[(dx, dy)]
@@ -266,17 +217,6 @@ def direction_between(from_pos, to_pos):
 # =====================================================================
 
 def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector=None, use_camera=True):
-    """
-    Exploracao DFS iterativa do labirinto com robo real/simulado.
-    
-    Args:
-        serial: Instancia de SerialComm
-        camera: Instancia de Picamera2 (ou None se --no-camera)
-        color_detector: Instancia de DetectorVitimas
-        letter_detector: Instancia de LetterDetector
-        use_camera: Se False, pula verificacao de vitimas
-    """
-
     # Estado do robo
     heading = NORTH  # Comeca virado para Norte
     pilha_caminho = [(0, 0)]

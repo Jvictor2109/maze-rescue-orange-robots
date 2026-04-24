@@ -10,10 +10,6 @@ class IMU:
     def __init__(self, bus_number=1,
                  mag_offset=(0.0, 0.0),
                  mag_scale=(1.0, 1.0)):
-        """
-        mag_offset: (offset_x, offset_y) — obtidos com calibrar_mag.py
-        mag_scale:  (scale_x, scale_y)   — obtidos com calibrar_mag.py
-        """
         self.bus = smbus2.SMBus(bus_number)
 
         # Calibração do magnetómetro
@@ -70,7 +66,6 @@ class IMU:
         return mx * 0.15, my * 0.15, mz * 0.15
 
     def get_heading(self):
-        """Lê o magnetómetro, aplica calibração, e devolve (graus, direção)."""
         mag = self.get_mag()
         if mag is None:
             return None, None

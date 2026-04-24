@@ -1,26 +1,14 @@
-"""
-Detector de letras H, S e U para vítimas do Maze Rescue.
-Usa template matching com múltiplas variações de fonte para robustez.
-Recebe um frame BGR e retorna a letra detectada (ou None).
-"""
 
 import cv2
 import numpy as np
 
 
 class LetterDetector:
-    """Detecta letras H, S, U num frame de câmera usando template matching."""
 
     TEMPLATE_SIZE = 80
     LETTERS = ["H", "S", "U"]
 
     def __init__(self, min_confidence=0.40, area_minima=2000):
-        """
-        Args:
-            min_confidence: Score mínimo de matching para aceitar detecção (0.0–1.0).
-                            Abaixo deste valor, retorna None (rejeita falsos positivos).
-            area_minima: Área mínima em pixels de um contorno para ser candidato a letra.
-        """
         self.min_confidence = min_confidence
         self.area_minima = area_minima
         self.templates = self._generate_templates()
@@ -30,7 +18,6 @@ class LetterDetector:
     # -----------------------------------------------------------------
 
     def _render_letter(self, letter, font, font_scale, thickness):
-        """Renderiza uma letra centrada numa imagem binária TEMPLATE_SIZE x TEMPLATE_SIZE."""
         size = self.TEMPLATE_SIZE
         img = np.zeros((size, size), dtype=np.uint8)
 
@@ -42,12 +29,6 @@ class LetterDetector:
         return img
 
     def _generate_templates(self):
-        """
-        Gera templates binários para H, S, U com múltiplas variações.
-
-        Cada letra recebe vários templates (fontes e espessuras diferentes)
-        para tolerar diferenças entre a fonte impressa real e o rendering do OpenCV.
-        """
         font_configs = [
             (cv2.FONT_HERSHEY_SIMPLEX, 2.5, 5),
             (cv2.FONT_HERSHEY_SIMPLEX, 2.5, 7),
@@ -74,23 +55,6 @@ class LetterDetector:
     # -----------------------------------------------------------------
 
     def detect(self, frame):
-        """
-        Analisa um frame e tenta detectar uma letra (H, S ou U).
-
-        Pipeline:
-          1. Converte para cinza + blur
-          2. Threshold de Otsu (robusto para preto-em-branco)
-          3. Limpeza morfológica
-          4. Encontra contornos e filtra por área / aspect ratio
-          5. Cada candidato é redimensionado e comparado com todos os templates
-          6. A melhor correspondência acima de min_confidence é retornada
-
-        Args:
-            frame: Imagem BGR capturada pela câmera
-
-        Returns:
-            String 'H', 'S' ou 'U' se detectada, ou None
-        """
         # --- Pré-processamento ---
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5, 5), 0)

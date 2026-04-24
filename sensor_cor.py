@@ -10,34 +10,7 @@ import threading
 import pigpio
 
 class sensor(threading.Thread):
-   """
-   This class reads RGB values from a TCS3200 colour sensor.
-
-   GND   Ground.
-   VDD   Supply Voltage (2.7-5.5V)
-   /OE   Output enable, active low. When OE is high OUT is disabled
-         allowing multiple sensors to share the same OUT line.
-   OUT   Output frequency square wave.
-   S0/S1 Output frequency scale selection.
-   S2/S3 Colour filter selection.
-
-   OUT is a square wave whose frequency is proprtional to the
-   intensity of the selected filter colour.
-
-   S2/S3 selects between red, green, blue, and no filter.
-
-   S0/S1 scales the frequency at 100%, 20%, 2% or off.
-
-   To take a reading the colour filters are selected in turn for a
-   fraction of a second and the frequency is read and converted to
-   Hz.  
-   """
    def __init__(self, pi, OUT, S2, S3, S0=None, S1=None, OE=None):
-      """
-      The gpios connected to the sensor OUT, S2, and S3 pins must
-      be specified.  The S2, S3 (frequency) and OE (output enable)
-      gpios are optional.
-      """
       threading.Thread.__init__(self)
       self._pi = pi
 
@@ -189,33 +162,15 @@ class sensor(threading.Thread):
             time.sleep(0.1)
 
    def pause(self):
-      """
-      No more readings will be made until resume is called.
-      """
       self._read = False
 
    def resume(self):
-      """
-      Resumes readings (after a call to pause).
-      """
       self._read = True
 
    def get_Hertz(self):
-      """
-      Returns the latest Hertz reading.
-      """
       return self.Hertz
 
    def get_rgb(self, top=255):
-      """
-      Returns the latest RGB reading.
-
-      The raw colour Hertz readings are converted to RGB values.
-
-      By default the RGB values are constrained to be between
-      0 and 255.  A different upper limit can be set by using
-      the top parameter.
-      """
       rgb = [0]*3
       for c in range(3):
          v = self.Hertz[c] - self._rgb_black[c]
@@ -229,9 +184,6 @@ class sensor(threading.Thread):
       return rgb
 
    def cancel(self):
-      """
-      Cancels the sensor and release all used resources.
-      """
       self._cb_S3.cancel()
       self._cb_S2.cancel()
       self._cb_OUT.cancel()
@@ -253,29 +205,14 @@ class sensor(threading.Thread):
          self._pi.set_mode(self._OE, self._mode_OE)
 
    def set_black_level(self, rgb):
-      """
-      Sets the black level calibration.
-      """
       for i in range(3):
          self._rgb_black[i] = rgb[i]
 
    def set_white_level(self, rgb):
-      """
-      Sets the white level calibration.
-      """
       for i in range(3):
          self._rgb_white[i] = rgb[i]
 
    def _set_filter(self, f):
-      """
-      Set the colour to be sampled.
-
-      f  S2  S3  Photodiode
-      0  L   L   Red
-      1  H   H   Green
-      2  L   H   Blue
-      3  H   L   Clear (no filter)
-      """
       if f == 0: # Red
          S2 = 0; S3 = 0
       elif f == 1: # Green
@@ -288,21 +225,9 @@ class sensor(threading.Thread):
       self._pi.write(self._S2, S2); self._pi.write(self._S3, S3)
 
    def get_frequency(self):
-      """
-      Returns the current frequency scaling.
-      """
       return self._frequency
 
    def set_frequency(self, f):
-      """
-      Sets the frequency scaling.
-
-      f  S0  S1  Frequency scaling
-      0  L   L   Off
-      1  L   H   2%
-      2  H   L   20%
-      3  H   H   100%
-      """
       if f == 0: # off
          S0 = 0; S1 = 0
       elif f == 1: # 2%
@@ -320,9 +245,6 @@ class sensor(threading.Thread):
          self._frequency = None
 
    def set_update_period(self, t):
-      """
-      Sets the period between RGB updates.
-      """
       if (t >= 0.1) and (t < 2.0):
          self._period = t
 

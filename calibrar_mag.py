@@ -1,12 +1,3 @@
-"""
-Calibração do magnetómetro AK09918.
-
-Instruções:
-  1. Corre este script.
-  2. Roda a IMU lentamente em 360° (manter nivelado).
-  3. Tenta cobrir todas as direções.
-  4. Após 30 segundos o script calcula e imprime os valores de calibração.
-"""
 
 import smbus2
 import time

@@ -1,23 +1,11 @@
-"""
-Módulo de comunicação serial com o ESP32.
-Dois modos de operação:
-  - Real: usa pyserial para comunicar via porta COM/USB
-  - Simulação: imprime comandos no terminal e lê respostas do teclado
-"""
 
 import time
 
 
 class SerialComm:
-    """Camada de comunicação com o ESP32."""
+
     # MUDAR BAUDRATE
     def __init__(self, port=None, baudrate=00, simulate=False):
-        """
-        Args:
-            port: Porta serial (ex: 'COM3', '/dev/ttyUSB0')
-            baudrate: Velocidade da comunicação
-            simulate: Se True, usa terminal em vez de serial real
-        """
         self.simulate = simulate
         self.serial = None
         self._dr_sim_distance = 0.0  # Simulacao: distancia acumulada dos encoders
@@ -31,17 +19,6 @@ class SerialComm:
             print("[SERIAL] Modo SIMULAÇÃO ativo — responda no terminal")
 
     def ping(self, max_tentativas=15, intervalo=2):
-        """
-        Envia PING ao ESP32 e espera READY como resposta.
-        Repete até max_tentativas com intervalo entre cada.
-
-        Args:
-            max_tentativas: Número máximo de tentativas (default 15 = 30s)
-            intervalo: Segundos entre tentativas
-
-        Returns:
-            True se recebeu READY, False se esgotou tentativas
-        """
         if self.simulate:
             print("[PING] Modo simulação — conexão assumida OK")
             return True
@@ -71,22 +48,12 @@ class SerialComm:
         return False
 
     def send(self, command):
-        """
-        Envia um comando e aguarda resposta.
-        
-        Args:
-            command: String do comando (ex: 'MOVE FORWARD', 'SENSOR ALL')
-        
-        Returns:
-            String com a resposta do ESP32
-        """
         if self.simulate:
             return self._simulate_send(command)
         else:
             return self._serial_send(command)
 
     def _serial_send(self, command):
-        """Envio real via pyserial."""
         # Limpa buffer de entrada
         self.serial.reset_input_buffer()
 
@@ -103,7 +70,6 @@ class SerialComm:
         return response
 
     def _simulate_send(self, command):
-        """Simulacao via terminal."""
         print(f"  >> {command}")
 
         if command == "SA":
@@ -134,7 +100,6 @@ class SerialComm:
             return "OK"
 
     def close(self):
-        """Fecha a porta serial."""
         if self.serial and self.serial.is_open:
             self.serial.close()
             print("[SERIAL] Porta fechada")
