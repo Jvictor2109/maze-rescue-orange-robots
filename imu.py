@@ -109,7 +109,7 @@ class IMU:
         # Aplica offset para alinhar 0deg com Norte do labirinto
         heading = (raw_heading - self.maze_north_offset) % 360
 
-        pos = int(heading // 90) % 4
+        pos = int(round(heading / 90.0)) % 4
 
         return heading, pos
 
