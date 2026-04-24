@@ -29,9 +29,9 @@ DR_POLL_INTERVAL = 0.05        # 50ms entre leituras de encoder
 DIRECTION_NAME = {NORTH: "Sul", EAST: "Leste", SOUTH: "Norte", WEST: "Oeste"}
 DIRECTION_DELTA = {
     NORTH: (0, 1),
-    EAST:  (1, 0),
+    EAST:  (-1, 0),
     SOUTH: (0, -1),
-    WEST:  (-1, 0),
+    WEST:  (1, 0),
 }
 
 # Inverso: dado um delta, qual a direcao absoluta
