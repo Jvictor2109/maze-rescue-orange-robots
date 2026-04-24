@@ -170,6 +170,7 @@ def move_forward(serial):
             break
 
         time.sleep(DR_POLL_INTERVAL)
+    print(f"Começo: {baseline}")
     print(f"Encoders: {deltas}")
     # 3. Para motores
     serial.send("MC 0 0 0 0")
