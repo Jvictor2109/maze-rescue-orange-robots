@@ -191,38 +191,52 @@ def angle_diff(target, current):
 def turn_to(target_dir, serial):
     target_angle = DIRECTION_ANGLE[target_dir]
 
+    start_heading, _ = imu.get_heading()
+    if start_heading is None:
+        print("[ERRO] IMU sem leitura antes de virar!")
+        return
+
+    diff = angle_diff(target_angle, start_heading)
+    if abs(diff) <= TURN_TOLERANCE:
+        return
+
+    # Decide a direção de rotação UMA VEZ no início
+    # Restauramos o comando original: assumimos que MC -speed speed vira à DIREITA
+    turn_right = diff > 0
+    speed = TURN_SPEED_FAST
+    
     start = time.time()
+    
+    if turn_right:
+        serial.send(f"MC -{speed} {speed} -{speed} {speed}")  # Virar direita
+    else:
+        serial.send(f"MC {speed} -{speed} {speed} -{speed}")  # Virar esquerda
+
     while True:
         heading_deg, _ = imu.get_heading()
-
         if heading_deg is None:
-            print("[ERRO] IMU sem leitura no turn_to!")
-            time.sleep(0.05)
+            time.sleep(0.02)
             continue
-
-        diff = angle_diff(target_angle, heading_deg)
-
-        # Dentro da tolerancia — parar
-        if abs(diff) <= TURN_TOLERANCE:
+            
+        current_diff = angle_diff(target_angle, heading_deg)
+        
+        # Condição de paragem 1: chegou ao alvo dentro da tolerância
+        if abs(current_diff) <= TURN_TOLERANCE:
+            break
+            
+        # Condição de paragem 2: o erro mudou de sinal, ou seja, já passámos do alvo (evita oscilação infinita)
+        if turn_right and current_diff < 0:
+            break
+        if not turn_right and current_diff > 0:
             break
 
-        # Timeout de seguranca
         if time.time() - start > TURN_TIMEOUT:
-            print(f"[ERRO] Timeout no turn_to! diff={diff:.1f}deg")
+            print(f"[ERRO] Timeout no turn_to! diff={current_diff:.1f}deg")
             break
-
-        # Velocidade proporcional a distancia ao alvo
-        speed = TURN_SPEED_SLOW if abs(diff) < TURN_SLOW_ZONE else TURN_SPEED_FAST
-
-        if diff > 0:
-            # Virar direita
-            serial.send(f"MC {speed} -{speed} {speed} -{speed}")
-        else:
-            # Virar esquerda
-            serial.send(f"MC -{speed} {speed} -{speed} {speed}")
 
         time.sleep(0.02)
 
+    # Pára os motores
     serial.send("MC 0 0 0 0")
 
 
