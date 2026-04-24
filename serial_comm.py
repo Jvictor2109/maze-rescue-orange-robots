@@ -10,8 +10,8 @@ import time
 
 class SerialComm:
     """Camada de comunicação com o ESP32."""
-
-    def __init__(self, port=None, baudrate=115200, simulate=False):
+    # MUDAR BAUDRATE
+    def __init__(self, port=None, baudrate=00, simulate=False):
         """
         Args:
             port: Porta serial (ex: 'COM3', '/dev/ttyUSB0')
