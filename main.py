@@ -218,7 +218,7 @@ def direction_between(from_pos, to_pos):
 
 def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector=None, use_camera=True):
     # Estado do robo
-    heading = EAST  # Comeca virado para Leste
+    heading = NORTH  # Comeca virado para Norte
     pilha_caminho = [(0, 0)]
     visitados = set()
     visitados.add((0, 0))
