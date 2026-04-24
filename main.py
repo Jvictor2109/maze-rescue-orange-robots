@@ -10,7 +10,7 @@ from color_victims.teste2 import DetectorVitimas
 from letter_detector import LetterDetector
 from sensor_cor import sensor
 
-sensor_cor = sensor()
+# sensor_cor = sensor()
 
 # =====================================================================
 # CONSTANTES DE HEADING
