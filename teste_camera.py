@@ -6,11 +6,13 @@ camera.configure(camera.create_preview_configuration(
 ))
 camera.start()
 
+frame = camera.capture_array()
+cv2.imshow("Frame", frame)
 while True:
-    if cv2.waitKey(1) & 0xFF == ord('c'):
+    if cv2.waitKey(1000) & 0xFF == ord('c'):
         frame = camera.capture_array()
         cv2.imshow("Frame", frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if cv2.waitKey(1000) & 0xFF == ord('q'):
         break
 
 camera.stop()
