@@ -1,4 +1,5 @@
 
+from cv2 import detail
 import argparse
 import sys
 import time
@@ -169,7 +170,7 @@ def move_forward(serial):
             break
 
         time.sleep(DR_POLL_INTERVAL)
-
+    print(f"Encoders: {delta}")
     # 3. Para motores
     serial.send("MC 0 0 0 0")
 
