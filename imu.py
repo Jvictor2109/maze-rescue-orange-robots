@@ -22,12 +22,18 @@ class IMU:
         self.maze_north_offset = maze_north_offset
 
         # Acorda ICM20600
-        self.bus.write_byte_data(self.ICM20600_ADDR, 0x6B, 0x00)
-        time.sleep(0.1)
+        try:
+            self.bus.write_byte_data(self.ICM20600_ADDR, 0x6B, 0x00)
+            time.sleep(0.1)
+        except OSError as e:
+            print(f"[IMU AVISO] Falha ao acordar ICM20600: {e}")
 
         # AK09918 modo continuo 100Hz
-        self.bus.write_byte_data(self.AK09918_ADDR, 0x31, 0x08)
-        time.sleep(0.1)
+        try:
+            self.bus.write_byte_data(self.AK09918_ADDR, 0x31, 0x08)
+            time.sleep(0.1)
+        except OSError as e:
+            print(f"[IMU AVISO] Falha ao configurar AK09918: {e}")
 
     def _read_word_2c(self, addr, reg):
         high = self.bus.read_byte_data(addr, reg)
@@ -37,40 +43,55 @@ class IMU:
 
     def get_gyro(self):
         # Leitura atomica de 6 bytes (gx, gy, gz)
-        data = self.bus.read_i2c_block_data(self.ICM20600_ADDR, 0x43, 6)
-        gx = (data[0] << 8) | data[1]
-        gy = (data[2] << 8) | data[3]
-        gz = (data[4] << 8) | data[5]
-        if gx >= 0x8000: gx -= 65536
-        if gy >= 0x8000: gy -= 65536
-        if gz >= 0x8000: gz -= 65536
-        scale = 131.0
-        return gx / scale, gy / scale, gz / scale
+        try:
+            data = self.bus.read_i2c_block_data(self.ICM20600_ADDR, 0x43, 6)
+            gx = (data[0] << 8) | data[1]
+            gy = (data[2] << 8) | data[3]
+            gz = (data[4] << 8) | data[5]
+            if gx >= 0x8000: gx -= 65536
+            if gy >= 0x8000: gy -= 65536
+            if gz >= 0x8000: gz -= 65536
+            scale = 131.0
+            return gx / scale, gy / scale, gz / scale
+        except OSError as e:
+            print(f"[IMU AVISO] Erro I2C no giroscópio: {e}")
+            return 0.0, 0.0, 0.0
 
     def get_accel(self):
         # Leitura atomica de 6 bytes (ax, ay, az)
-        data = self.bus.read_i2c_block_data(self.ICM20600_ADDR, 0x3B, 6)
-        ax = (data[0] << 8) | data[1]
-        ay = (data[2] << 8) | data[3]
-        az = (data[4] << 8) | data[5]
-        if ax >= 0x8000: ax -= 65536
-        if ay >= 0x8000: ay -= 65536
-        if az >= 0x8000: az -= 65536
-        scale = 16384.0  # +/-2g
-        return ax / scale, ay / scale, az / scale
+        try:
+            data = self.bus.read_i2c_block_data(self.ICM20600_ADDR, 0x3B, 6)
+            ax = (data[0] << 8) | data[1]
+            ay = (data[2] << 8) | data[3]
+            az = (data[4] << 8) | data[5]
+            if ax >= 0x8000: ax -= 65536
+            if ay >= 0x8000: ay -= 65536
+            if az >= 0x8000: az -= 65536
+            scale = 16384.0  # +/-2g
+            return ax / scale, ay / scale, az / scale
+        except OSError as e:
+            print(f"[IMU AVISO] Erro I2C no acelerômetro: {e}")
+            return 0.0, 0.0, 0.0
 
     def get_mag(self):
         # Espera até dados estarem prontos (max 10 tentativas)
         for _ in range(10):
-            status = self.bus.read_byte_data(self.AK09918_ADDR, 0x10)
-            if status & 0x01:
-                break
+            try:
+                status = self.bus.read_byte_data(self.AK09918_ADDR, 0x10)
+                if status & 0x01:
+                    break
+            except OSError:
+                pass # Ignora falhas momentâneas no status
             time.sleep(0.01)
         else:
             return None  # timeout
 
-        data = self.bus.read_i2c_block_data(self.AK09918_ADDR, 0x11, 6)
-        self.bus.read_byte_data(self.AK09918_ADDR, 0x18)  # liberta buffer
+        try:
+            data = self.bus.read_i2c_block_data(self.AK09918_ADDR, 0x11, 6)
+            self.bus.read_byte_data(self.AK09918_ADDR, 0x18)  # liberta buffer
+        except OSError as e:
+            print(f"[IMU AVISO] Erro I2C ao ler dados do magnetômetro: {e}")
+            return None
 
         mx = (data[1] << 8) | data[0]
         my = (data[3] << 8) | data[2]
