@@ -73,6 +73,23 @@ class IMU:
             print(f"[IMU AVISO] Erro I2C no acelerômetro: {e}")
             return 0.0, 0.0, 0.0
 
+    def get_inclination(self):
+        """Retorna o ângulo de inclinação (pitch/roll) aproximado em graus.
+        Baseado na aceleração, útil para detectar rampas.
+        Retorna um valor próximo de 180º quando plano, e menor (ex: 170º) quando inclinado.
+        """
+        ax, ay, az = self.get_accel()
+        if (ax, ay, az) == (0.0, 0.0, 0.0):
+            return None
+        
+        # Dependendo da montagem, a inclinação frente/trás pode estar no eixo X ou Y.
+        # Estamos calculando com o eixo Y. Se for o eixo X, basta trocar ay por ax.
+        inclination = math.atan2(ay, az) * 180 / math.pi
+        
+        # O atan2 pode retornar negativo, então vamos converter para positivo se necessário, 
+        # ou apenas usar o valor absoluto para facilitar a lógica (180 vira 180, -180 vira 180)
+        return abs(inclination)
+
     def get_mag(self):
         # Espera até dados estarem prontos (max 10 tentativas)
         for _ in range(10):

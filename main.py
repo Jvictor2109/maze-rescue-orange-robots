@@ -156,6 +156,24 @@ def move_forward(serial):
 
     #  Poll encoders ate atingir distancia de uma celula
     while True:
+        # Verifica se esta numa rampa
+        inclination = imu.get_inclination()
+        # Assumindo 178 como normal e ~170-174 como inclinado. Se for menor ou igual a 175, detecta rampa.
+        # Caso o eixo de montagem esteja invertido, pode ser necessario ajustar para o eixo X na classe IMU.
+        if inclination is not None and inclination <= 175.5:
+            print(f"[RAMPA] Inclinação detectada: {inclination:.1f}º. Iniciando subida!")
+            ramp_speed = 60 # Aumenta a velocidade para vencer a rampa
+            serial.send(f"MC {ramp_speed} {ramp_speed} {ramp_speed} {ramp_speed}")
+            
+            while True:
+                inc_atual = imu.get_inclination()
+                # Verifica se voltou ao normal (>= 177)
+                if inc_atual is not None and inc_atual >= 177.0:
+                    print(f"[RAMPA] Fim da rampa. Inclinação normalizada: {inc_atual:.1f}º. Parando.")
+                    serial.send("MC 0 0 0 0")
+                    return "OK" # Retorna imediatamente após a rampa
+                time.sleep(0.02)
+                
         response = serial.send("MR")
         try:
             values = [float(v.strip()) for v in response.split(",")]
