@@ -178,7 +178,7 @@ def move_forward(serial):
 
     # 2. Poll encoders ate atingir distancia de uma celula
     while True:
-        response = serial.send("DR")
+        response = serial.send("MR")
         try:
             values = [float(v.strip()) for v in response.split(",")]
             avg_distance = sum(values) / len(values)
