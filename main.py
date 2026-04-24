@@ -161,7 +161,7 @@ def move_forward(serial):
         print(f"Inclinção: {inclination}")
         # Assumindo 178 como normal e ~170-174 como inclinado. Se for menor ou igual a 175, detecta rampa.
         # Caso o eixo de montagem esteja invertido, pode ser necessario ajustar para o eixo X na classe IMU.
-        if inclination is not None and inclination <= 177.5:
+        if inclination is not None and inclination <= 176.5:
             print(f"[RAMPA] Inclinação detectada: {inclination:.1f}º. Iniciando subida!")
             ramp_speed = 60 # Aumenta a velocidade para vencer a rampa
             serial.send(f"MC {ramp_speed} {ramp_speed} {ramp_speed} {ramp_speed}")
@@ -169,7 +169,7 @@ def move_forward(serial):
             while True:
                 inc_atual = imu.get_inclination()
                 # Verifica se voltou ao normal (>= 177)
-                if inc_atual is not None and inc_atual >= 177.0:
+                if inc_atual is not None and inc_atual >= 178.0:
                     print(f"[RAMPA] Fim da rampa. Inclinação normalizada: {inc_atual:.1f}º. Parando.")
                     serial.send("MC 0 0 0 0")
                     return "OK" # Retorna imediatamente após a rampa
