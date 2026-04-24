@@ -82,7 +82,7 @@ def read_walls(heading, serial):
     Returns:
         dict com 4 direcoes: {NORTH: True/False, EAST: True/False, ...}
     """
-    response = serial.send("SA")
+    response = serial.send("SR")
 
     try:
         parts = response.split(",")
