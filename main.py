@@ -227,15 +227,24 @@ def turn_to(target_dir, serial):
 
 
 def move_to_direction(target_dir, serial):
-    # Roda para a direcao alvo
-    turn_to(target_dir, serial)
-    # Avanca uma celula
-    response = move_forward(serial)
-
-    # Retorna o heading REAL (lido da IMU), nao o pretendido
+    # Lê a direção atual real
     _, actual_cardinal = imu.get_heading()
     if actual_cardinal is None:
         actual_cardinal = target_dir  # fallback
+
+    # Apenas roda se a direção cardinal alvo for diferente da atual
+    if actual_cardinal != target_dir:
+        turn_to(target_dir, serial)
+    else:
+        print(f"  [INFO] Já virado para {DIRECTION_NAME[target_dir]}. Seguindo em frente.")
+
+    # Avanca uma celula
+    response = move_forward(serial)
+
+    # Retorna o heading REAL atualizado apos movimento
+    _, actual_cardinal = imu.get_heading()
+    if actual_cardinal is None:
+        actual_cardinal = target_dir
     return actual_cardinal, response
 
 
