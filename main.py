@@ -431,7 +431,7 @@ def main():
     )
 
     serial.send("MC 0 0 0 0")
-    time.sleep(5)
+    time.sleep()
     # Handshake — verifica conexão com ESP32 antes de tudo
     if not serial.ping():
         print("[FATAL] Não foi possível comunicar com o ESP32. A encerrar.")
