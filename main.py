@@ -170,36 +170,36 @@ def move_forward(serial):
             print(f"[ERRO] Resposta MR invalida: '{response}'")
             avg_distance = 0.0
 
-        tile = sensor_cor.get_rgb()
-        if tile == "preto":
-            print("[AVISO] Tile preto detectado! Parando motores.")
-            serial.send("MC 0 0 0 0")
-            time.sleep(0.5)
+        # tile = sensor_cor.get_rgb()
+        # if tile == "preto":
+        #     print("[AVISO] Tile preto detectado! Parando motores.")
+        #     serial.send("MC 0 0 0 0")
+        #     time.sleep(0.5)
 
-            print(f"[AVISO] Recuando {avg_distance:.1f} cm de re...")
-            baseline_response_rev = serial.send("MR")
-            try:
-                baseline_rev = [float(v.strip()) for v in baseline_response_rev.split(",")]
-            except (ValueError, IndexError):
-                baseline_rev = [0.0, 0.0, 0.0, 0.0]
+            # print(f"[AVISO] Recuando {avg_distance:.1f} cm de re...")
+            # baseline_response_rev = serial.send("MR")
+            # try:
+            #     baseline_rev = [float(v.strip()) for v in baseline_response_rev.split(",")]
+            # except (ValueError, IndexError):
+            #     baseline_rev = [0.0, 0.0, 0.0, 0.0]
 
-            serial.send(f"MC -{speed} -{speed} -{speed} -{speed}")
+            # serial.send(f"MC -{speed} -{speed} -{speed} -{speed}")
 
-            while True:
-                response_rev = serial.send("MR")
-                try:
-                    values_rev = [float(v.strip()) for v in response_rev.split(",")]
-                    deltas_rev = [abs(v - b) for v, b in zip(values_rev, baseline_rev)]
-                    avg_distance_rev = sum(deltas_rev) / len(deltas_rev)
-                except (ValueError, IndexError):
-                    avg_distance_rev = 0.0
+            # while True:
+            #     response_rev = serial.send("MR")
+            #     try:
+            #         values_rev = [float(v.strip()) for v in response_rev.split(",")]
+            #         deltas_rev = [abs(v - b) for v, b in zip(values_rev, baseline_rev)]
+            #         avg_distance_rev = sum(deltas_rev) / len(deltas_rev)
+            #     except (ValueError, IndexError):
+            #         avg_distance_rev = 0.0
 
-                if avg_distance_rev >= avg_distance:
-                    break
-                time.sleep(DR_POLL_INTERVAL)
+            #     if avg_distance_rev >= avg_distance:
+            #         break
+            #     time.sleep(DR_POLL_INTERVAL)
 
-            serial.send("MC 0 0 0 0")
-            return "BLACK"
+            # serial.send("MC 0 0 0 0")
+            # return "BLACK"
 
         if avg_distance >= CELL_DISTANCE_CM:
             break
