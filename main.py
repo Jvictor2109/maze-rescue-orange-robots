@@ -34,12 +34,12 @@ DIRECTION_DELTA = {
     WEST:  (-1, 0),
 }
 
-# Inverso: dado um delta, qual a direcao absoluta?
+# Inverso: dado um delta, qual a direcao absoluta
 DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 
 imu = IMU(
-    mag_offset = (-0.8250, 14.1750),
-    mag_scale = (1.0576, 0.9484)
+    mag_offset = (-7.3500, 4.5750),
+    mag_scale = (0.9841, 1.0164)
 )
 
 
@@ -131,7 +131,7 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
 # =====================================================================
 
 def move_forward(serial):
-    # 1. Ler encoder ANTES de ligar motores (valor base)
+   
     speed = MOTOR_SPEED
     baseline_response = serial.send("MR")
     try:
@@ -140,10 +140,10 @@ def move_forward(serial):
         print(f"[ERRO] Leitura base do encoder invalida: '{baseline_response}'")
         baseline = [0.0, 0.0, 0.0, 0.0]
 
-    # 2. Liga motores
+    # Liga motores
     serial.send(f"MC {speed} {speed} {speed} {speed}")
 
-    # 3. Poll encoders ate atingir distancia de uma celula
+    #  Poll encoders ate atingir distancia de uma celula
     while True:
         response = serial.send("MR")
         try:
