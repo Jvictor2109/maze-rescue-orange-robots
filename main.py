@@ -13,10 +13,10 @@ from letter_detector import LetterDetector
 # =====================================================================
 # CONSTANTES DE HEADING
 # =====================================================================
-NORTH = 0
-EAST = 1
-SOUTH = 2
-WEST = 3
+NORTH = 3
+EAST = 0
+SOUTH = 1
+WEST = 2
 
 # =====================================================================
 # CONSTANTES DE PROTOCOLO
@@ -74,7 +74,7 @@ def read_walls(heading, serial):
     right_wall = right_dist <= WALL_THRESHOLD_CM
 
     print(f"  [SA] Distancias: esq={left_dist:.1f}cm frente={front_dist:.1f}cm dir={right_dist:.1f}cm")
-
+    
     walls = {}
     walls[relative_to_absolute(heading, "front")] = front_wall
     walls[relative_to_absolute(heading, "left")] = left_wall
