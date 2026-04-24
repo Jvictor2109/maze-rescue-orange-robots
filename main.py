@@ -23,7 +23,7 @@ WEST = 3
 # =====================================================================
 CELL_DISTANCE_CM = 30.0       # Distancia de uma celula em cm (encoder)
 WALL_THRESHOLD_CM = 5.0       # Distancia <= 5cm = parede (ultrassonico)
-MOTOR_SPEED = 100              # Velocidade padrao dos motores
+MOTOR_SPEED = 30              # Velocidade padrao dos motores
 DR_POLL_INTERVAL = 0.05        # 50ms entre leituras de encoder
 
 DIRECTION_NAME = {NORTH: "Norte", EAST: "Leste", SOUTH: "Sul", WEST: "Oeste"}
