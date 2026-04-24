@@ -204,10 +204,10 @@ def turn_to(target_dir, serial):
         if abs(diff) <= TURN_TOLERANCE:
             break
 
-        # # Timeout de seguranca
-        # if time.time() - start > TURN_TIMEOUT:
-        #     print(f"[ERRO] Timeout no turn_to! diff={diff:.1f}deg")
-        #     break
+        # Timeout de seguranca
+        if time.time() - start > TURN_TIMEOUT:
+            print(f"[ERRO] Timeout no turn_to! diff={diff:.1f}deg")
+            break
 
         # Velocidade proporcional a distancia ao alvo
         speed = TURN_SPEED_SLOW if abs(diff) < TURN_SLOW_ZONE else TURN_SPEED_FAST
