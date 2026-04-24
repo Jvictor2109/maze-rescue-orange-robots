@@ -12,7 +12,7 @@ from multiprocessing import popen_fork
 import argparse
 import sys
 import time
-
+import cv2
 from imu import IMU
 from serial_comm import SerialComm
 from color_victims.teste2 import DetectorVitimas
@@ -82,7 +82,7 @@ def read_walls(heading, serial):
     Returns:
         dict com 4 direcoes: {NORTH: True/False, EAST: True/False, ...}
     """
-    response = serial.send("XX")
+    response = serial.send("SR")
 
     try:
         parts = response.split(",")
@@ -134,6 +134,7 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
         time.sleep(1)
         # Captura um unico frame apos confirmacao
         frame = camera.capture_array()
+        cv2.imwrite("/home/litch/debug_frame.jpg", frame)
 
         # Deteccao de cor
         cor, kits = color_detector.processar_frame(frame)
