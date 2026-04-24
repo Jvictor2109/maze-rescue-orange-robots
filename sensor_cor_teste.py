@@ -37,4 +37,4 @@ def identificar_cor(rgb):
         return "desconhecido"
 
 while True:
-    print(f"Cor: {identificar_cor(tcs.get_rgb())}")
+    print(f"Cor: {identificar_cor(s.get_rgb())}")
