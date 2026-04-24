@@ -12,6 +12,7 @@ import argparse
 import sys
 import time
 
+from imu import IMU
 from serial_comm import SerialComm
 from color_victims.teste2 import DetectorVitimas
 from letter_detector import LetterDetector
@@ -44,6 +45,8 @@ DIRECTION_DELTA = {
 # Inverso: dado um delta, qual a direcao absoluta?
 DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 
+imu = IMU()
+
 
 # =====================================================================
 # FUNCOES DE HEADING
@@ -59,29 +62,6 @@ def relative_to_absolute(heading, relative):
     """
     offsets = {"front": 0, "left": -1, "right": 1, "back": 2}
     return (heading + offsets[relative]) % 4
-
-
-def calculate_turn(current_heading, target_direction):
-    """
-    Calcula a sequencia de TURNs necessaria para virar de current_heading para target_direction.
-    
-    Returns:
-        Lista de comandos ('TURN LEFT' ou 'TURN RIGHT')
-        Novo heading apos os turns
-    """
-    diff = (target_direction - current_heading) % 4
-
-    if diff == 0:
-        return [], current_heading
-    elif diff == 1:
-        return ["TURN RIGHT"], target_direction
-    elif diff == 2:
-        # Meia-volta: 2x RIGHT e mais simples que 2x LEFT
-        return ["TURN RIGHT", "TURN RIGHT"], target_direction
-    elif diff == 3:
-        return ["TURN LEFT"], target_direction
-
-    return [], current_heading
 
 
 # =====================================================================
@@ -157,7 +137,7 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
             print(f"  [COR] Vitima de COR detectada ({lado}): {cor} - Kits: {kits}")
             serial.send(f"VICTIM COLOR {cor}")
             victims.append(("cor", cor, kits))
-            
+
 
         # Deteccao de letra
         letra = letter_detector.detect(frame)
@@ -217,7 +197,37 @@ def move_forward(serial):
     return tile_response
 
 
-def move_to_direction(heading, target_dir, serial):
+def turn_to(target_dir, serial):
+    _, pos = imu.get_heading()
+
+    if target_dir == pos:
+        return
+
+    diff = (target_dir - pos) % 4
+
+    if diff == 1:
+        serial.send("MC 30 -30 30 -30")
+    elif diff == 2:
+        serial.send("MC 30 -30 30 -30")
+    elif diff == 3:
+        serial.send("MC -30 30 -30 30")
+
+    start = time.time()
+    while pos != target_dir:
+        if time.time() - start > 5.0:
+            print("[ERRO] Timeout no turn_to!")
+            break
+        _, pos = imu.get_heading()
+        time.sleep(0.02)
+
+    serial.send("MC 0 0 0 0")
+
+    
+
+
+
+
+def move_to_direction(target_dir, serial):
     """
     Vira o robo para a direcao target_dir e avanca uma celula.
     
@@ -230,14 +240,11 @@ def move_to_direction(heading, target_dir, serial):
         (novo_heading, resposta) — resposta pode ser 'OK', 'BLACK' ou 'BLUE'
     """
     # Calcula e executa turns
-    turns, new_heading = calculate_turn(heading, target_dir)
-    for turn_cmd in turns:
-        serial.send(turn_cmd)
-
+    turn_to(target_dir, serial)
     # Avanca uma celula com controlo direto
     response = move_forward(serial)
 
-    return new_heading, response
+    return target_dir, response
 
 
 def direction_between(from_pos, to_pos):
@@ -344,7 +351,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 print(f"\n-> Avancando para {DIRECTION_NAME[direcao]} -> ({prox_x}, {prox_y})")
 
                 # Move o robo fisicamente
-                heading, response = move_to_direction(heading, direcao, serial)
+                heading, response = move_to_direction(direcao, serial)
 
                 # Verifica resposta do ESP32
                 if response == "BLACK":
@@ -383,7 +390,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 )
 
                 # Move fisicamente
-                heading, _ = move_to_direction(heading, target_dir, serial)
+                heading, _ = move_to_direction(target_dir, serial)
 
     # -------------------------------------------------
     # FINALIZACAO

@@ -84,7 +84,7 @@ class IMU:
         heading = math.atan2(my_cal, mx_cal) * 180 / math.pi
         heading = heading % 360
 
-        pos = ["N", "O", "S", "E"][int(heading // 90) % 4]
+        pos = int(heading // 90) % 4
 
         return heading, pos
 
