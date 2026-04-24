@@ -5,7 +5,7 @@ import time
 class SerialComm:
 
     # MUDAR BAUDRATE
-    def __init__(self, port=None, baudrate=00, simulate=False):
+    def __init__(self, port=None, baudrate=115200, simulate=False):
         self.simulate = simulate
         self.serial = None
         self._dr_sim_distance = 0.0  # Simulacao: distancia acumulada dos encoders
@@ -72,7 +72,7 @@ class SerialComm:
     def _simulate_send(self, command):
         print(f"  >> {command}")
 
-        if command == "SA":
+        if command == "SR":
             response = input("  << (esq,frente,dir em cm - ex: 30,5,45): ").strip()
             return response
         elif command.startswith("MC "):
@@ -84,7 +84,7 @@ class SerialComm:
                 self._dr_sim_distance = 0.0
             print("  << OK")
             return "OK"
-        elif command == "DR":
+        elif command == "MR":
             # Distance Read — incrementa 10cm por chamada (simula encoder)
             self._dr_sim_distance += 10.0
             response = f"{self._dr_sim_distance},{self._dr_sim_distance},{self._dr_sim_distance},{self._dr_sim_distance}"

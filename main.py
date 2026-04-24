@@ -1,5 +1,4 @@
 
-from multiprocessing import popen_fork
 import argparse
 import sys
 import time
@@ -22,20 +21,31 @@ WEST = 3
 # CONSTANTES DE PROTOCOLO
 # =====================================================================
 CELL_DISTANCE_CM = 30.0       # Distancia de uma celula em cm (encoder)
-WALL_THRESHOLD_CM = 15.0       # Distancia <= 5cm = parede (ultrassonico)
+WALL_THRESHOLD_CM = 15.0      # Distancia <= threshold = parede (ultrassonico)
 MOTOR_SPEED = 50              # Velocidade padrao dos motores
-DR_POLL_INTERVAL = 0.05        # 50ms entre leituras de encoder
+DR_POLL_INTERVAL = 0.05       # 50ms entre leituras de encoder
 
-DIRECTION_NAME = {NORTH: "Sul", EAST: "Leste", SOUTH: "Norte", WEST: "Oeste"}
+# Convencao standard: N=+Y, E=+X, S=-Y, W=-X
+DIRECTION_NAME = {NORTH: "Norte", EAST: "Leste", SOUTH: "Sul", WEST: "Oeste"}
 DIRECTION_DELTA = {
     NORTH: (0, 1),
-    EAST:  (-1, 0),
+    EAST:  (1, 0),
     SOUTH: (0, -1),
-    WEST:  (1, 0),
+    WEST:  (-1, 0),
 }
 
 # Inverso: dado um delta, qual a direcao absoluta
 DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
+
+# Angulo alvo (graus) para cada cardinal, apos maze_north_offset aplicado
+DIRECTION_ANGLE = {NORTH: 0.0, EAST: 90.0, SOUTH: 180.0, WEST: 270.0}
+
+# Constantes de controlo de rotacao
+TURN_TOLERANCE = 10.0         # graus — para motores quando dentro desta margem
+TURN_SLOW_ZONE = 30.0         # graus — reduz velocidade quando proximo do alvo
+TURN_SPEED_FAST = 30
+TURN_SPEED_SLOW = 18
+TURN_TIMEOUT = 10.0           # segundos
 
 imu = IMU(
     mag_offset = (-7.3500, 4.5750),
@@ -170,40 +180,61 @@ def move_forward(serial):
     return tile_response
 
 
+def angle_diff(target, current):
+    """Diferenca angular com sinal: positivo = virar direita, negativo = virar esquerda."""
+    diff = (target - current + 180) % 360 - 180
+    return diff
+
+
 def turn_to(target_dir, serial):
-    _, pos = imu.get_heading()
-
-    if target_dir == pos:
-        return
-
-    diff = (target_dir - pos) % 4
-
-    if diff == 1:
-        serial.send("MC 30 -30 30 -30")
-    elif diff == 2:
-        serial.send("MC 30 -30 30 -30")
-    elif diff == 3:
-        serial.send("MC -30 30 -30 30")
+    target_angle = DIRECTION_ANGLE[target_dir]
 
     start = time.time()
-    while pos != target_dir:
-        if time.time() - start > 10.0:
-            print("[ERRO] Timeout no turn_to!")
+    while True:
+        heading_deg, _ = imu.get_heading()
+
+        if heading_deg is None:
+            print("[ERRO] IMU sem leitura no turn_to!")
+            time.sleep(0.05)
+            continue
+
+        diff = angle_diff(target_angle, heading_deg)
+
+        # Dentro da tolerancia — parar
+        if abs(diff) <= TURN_TOLERANCE:
             break
-        _, pos = imu.get_heading()
+
+        # Timeout de seguranca
+        if time.time() - start > TURN_TIMEOUT:
+            print(f"[ERRO] Timeout no turn_to! diff={diff:.1f}deg")
+            break
+
+        # Velocidade proporcional a distancia ao alvo
+        speed = TURN_SPEED_SLOW if abs(diff) < TURN_SLOW_ZONE else TURN_SPEED_FAST
+
+        if diff > 0:
+            # Virar direita
+            serial.send(f"MC {speed} -{speed} {speed} -{speed}")
+        else:
+            # Virar esquerda
+            serial.send(f"MC -{speed} {speed} -{speed} {speed}")
+
         time.sleep(0.02)
 
     serial.send("MC 0 0 0 0")
 
 
-
 def move_to_direction(target_dir, serial):
-    # Calcula e executa turns
+    # Roda para a direcao alvo
     turn_to(target_dir, serial)
-    # Avanca uma celula com controlo direto
+    # Avanca uma celula
     response = move_forward(serial)
 
-    return target_dir, response
+    # Retorna o heading REAL (lido da IMU), nao o pretendido
+    _, actual_cardinal = imu.get_heading()
+    if actual_cardinal is None:
+        actual_cardinal = target_dir  # fallback
+    return actual_cardinal, response
 
 
 def direction_between(from_pos, to_pos):
@@ -217,8 +248,14 @@ def direction_between(from_pos, to_pos):
 # =====================================================================
 
 def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector=None, use_camera=True):
-    # Estado do robo
-    heading = NORTH  # Comeca virado para Norte
+    # Auto-calibra o heading inicial para que a direcao atual seja sempre o Norte (0) do labirinto
+    if not imu.calibrate_north():
+        print("[AVISO] Falha ao ler IMU no arranque. A assumir Norte como inicial.")
+        heading = NORTH
+    else:
+        _, heading = imu.get_heading()
+        if heading is None:
+            heading = NORTH
     pilha_caminho = [(0, 0)]
     visitados = set()
     visitados.add((0, 0))
@@ -296,10 +333,13 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 heading, response = move_to_direction(direcao, serial)
 
                 # Verifica resposta do ESP32
+                # TODO: ativar quando sensor de chao estiver implementado
                 if response == "BLACK":
-                    print(f"  [BLACK] Tile preto em ({prox_x}, {prox_y})! Robo retornou automaticamente.")
+                    print(f"  [BLACK] Tile preto em ({prox_x}, {prox_y})!")
                     tiles_bloqueados.add((prox_x, prox_y))
-                    # Robo ja voltou ao tile atual — heading mantem-se, posicao nao muda
+                    # Fisicamente voltar a celula anterior
+                    back_dir = direction_between((prox_x, prox_y), (atual_x, atual_y))
+                    heading, _ = move_to_direction(back_dir, serial)
                     continue
 
                 elif response == "BLUE":
