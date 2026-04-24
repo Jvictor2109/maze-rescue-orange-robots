@@ -13,10 +13,10 @@ from letter_detector import LetterDetector
 # =====================================================================
 # CONSTANTES DE HEADING
 # =====================================================================
-NORTH = 3
-EAST = 0
-SOUTH = 1
-WEST = 2
+NORTH = 0
+EAST = 1
+SOUTH = 2
+WEST = 3
 
 # =====================================================================
 # CONSTANTES DE PROTOCOLO

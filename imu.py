@@ -76,9 +76,9 @@ class IMU:
         mx_cal = (mx - self.mag_offset[0]) * self.mag_scale[0]
         my_cal = (my - self.mag_offset[1]) * self.mag_scale[1]
 
-        # Para inverter APENAS Norte e Sul (sem afetar Leste/Oeste), 
-        # invertemos apenas o sinal do eixo X no atan2:
-        heading = math.atan2(-my_cal, mx_cal) * 180 / math.pi
+        # Para inverter Leste/Oeste (mantendo Norte/Sul igual),
+        # invertemos o sinal do eixo Y no atan2:
+        heading = math.atan2(my_cal, mx_cal) * 180 / math.pi
         heading = heading % 360
 
         pos = int(heading // 90) % 4
