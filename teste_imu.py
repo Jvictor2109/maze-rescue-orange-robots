@@ -69,63 +69,32 @@ def get_heading(mx, my):
 
     return heading, pos
 
-# ============================================================
-#  PASSO 1: Calibração do bias do giroscópio
-# ============================================================
-# O giroscópio nunca lê 0 quando está parado — tem um offset
-# constante chamado "bias". Se não o subtrairmos, o ângulo
-# acumulado vai driftar mesmo com o robô parado.
-#
-# Aqui lemos gz 200 vezes (~2 segundos) com o robô PARADO
-# e calculamos a média. Esse valor é o bias.
-
-print("Calibrando giroscópio... NÃO MEXER!")
-bias_samples = []
-for i in range(200):
-    _, _, gz = get_gyro()
-    bias_samples.append(gz)
-    time.sleep(0.01)
-
-bias_z = sum(bias_samples) / len(bias_samples)
-print(f"Bias Z calculado: {bias_z:.4f} °/s")
-print("Calibração concluída!\n")
-
-# ============================================================
-#  PASSO 2: Loop principal — integração do giroscópio
-# ============================================================
-# angle_z guarda o ângulo acumulado em graus desde o arranque.
-# Começa em 0° que definimos como "Norte".
-
+# Integração do giroscópio para ângulo acumulado
 angle_z = 0.0
 last_time = time.time()
 
 while True:
     now = time.time()
-    dt = now - last_time   # tempo desde a última leitura (em segundos)
+    dt = now - last_time
     last_time = now
 
-    # --- Ler giroscópio ---
     gx, gy, gz = get_gyro()
 
-    # PASSO 3: Integrar — gz está em °/s, multiplicar por dt dá graus
-    # Subtraímos o bias para compensar o offset do sensor
-    angle_z += (gz - bias_z) * dt
+    print(f"Gyro - x:{gx:.2f}, y:{gy:.2f}, z:{gz:.2f}")
 
-    # PASSO 4: Snap ao múltiplo de 90° mais próximo
-    # round(angle_z / 90) arredonda ao inteiro mais próximo
-    # multiplicar por 90 dá-nos 0, 90, 180, ou 270
-    snapped = round(angle_z / 90) * 90
+    mag = get_mag()
+    if mag:
+        mx, my, mz = mag
+        heading, pos = get_heading(mx, my)
+        print(f"Mag - mx:{mx:.2f}, my:{my:.2f}: mz{mz:.2f}")
+        print(f"Heading: {heading:.2f}")
+        print(f"Posição: {pos}")
 
-    # Normalizar para [0, 360) e converter para direção
-    pos = ["N", "O", "S", "E"][int((snapped % 360) // 90) % 4]
-
-    print(f"Gyro gz: {gz:.2f}°/s | Ângulo acumulado: {angle_z:.1f}° | Snap: {snapped}° | Direção: {pos}")
-
-    # --- Acelerómetro (inclinação) ---
     ax, ay, az = get_accel()
     az_clamped = max(-1.0, min(1.0, az))
     inclinacao = math.acos(az_clamped) * 180 / math.pi
-    print(f"Inclinação: {inclinacao:.2f}°")
+    print(f"Acelerómetro: AX: {ax}, AY: {ay} AZ: {az}")
+    print(f"Inclinação: {inclinacao:.2f}º")
     print()
 
     time.sleep(3)
