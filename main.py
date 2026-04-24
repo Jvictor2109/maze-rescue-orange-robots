@@ -214,10 +214,10 @@ def turn_to(target_dir, serial):
 
         if diff > 0:
             # Virar direita
-            serial.send(f"MC -{speed} {speed} -{speed} {speed}")
+            serial.send(f"MC {speed} -{speed} {speed} -{speed}")
         else:
             # Virar esquerda
-            serial.send(f"MC {speed} -{speed} {speed} -{speed}")
+            serial.send(f"MC -{speed} {speed} -{speed} {speed}")
 
         time.sleep(0.02)
 
@@ -301,8 +301,9 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
             
             # 3. Montar opcoes livres (direcoes absolutas sem parede e nao visitadas)
             opcoes_livres = []
-            # Prioridade: Leste, Norte, Sul, Oeste
-            for d in [EAST, NORTH, SOUTH, WEST]:
+            # Prioridade relativa: Frente, Direita, Esquerda, Tras
+            for rel_dir in ["front", "right", "left", "back"]:
+                d = relative_to_absolute(heading, rel_dir)
                 if not walls[d]:
                     dx, dy = DIRECTION_DELTA[d]
                     opcoes_livres.append((d, dx, dy))
