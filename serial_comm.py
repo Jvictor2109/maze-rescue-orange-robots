@@ -51,13 +51,13 @@ class SerialComm:
         for tentativa in range(1, max_tentativas + 1):
             try:
                 self.serial.reset_input_buffer()
-                self.serial.write(b"PING\n")
+                self.serial.write(b"PG\n")
                 self.serial.flush()
 
                 response = self.serial.readline().decode().strip()
 
-                if response == "READY":
-                    print(f"[PING] ESP32 respondeu READY (tentativa {tentativa})")
+                if response == "OK":
+                    print(f"[PING] ESP32 respondeu OK (tentativa {tentativa})")
                     return True
                 else:
                     print(f"[PING] Tentativa {tentativa}/{max_tentativas} — resposta: '{response}'")
