@@ -8,7 +8,9 @@ from imu import IMU
 from serial_comm import SerialComm
 from color_victims.teste2 import DetectorVitimas
 from letter_detector import LetterDetector
+from sensor_cor import sensor
 
+sensor_cor = sensor()
 
 # =====================================================================
 # CONSTANTES DE HEADING
@@ -157,6 +159,8 @@ def move_forward(serial):
     #  Poll encoders ate atingir distancia de uma celula
     while True:
         response = serial.send("MR")
+
+
         try:
             values = [float(v.strip()) for v in response.split(",")]
             # Distancia percorrida = leitura atual - leitura base
@@ -165,6 +169,37 @@ def move_forward(serial):
         except (ValueError, IndexError):
             print(f"[ERRO] Resposta MR invalida: '{response}'")
             avg_distance = 0.0
+
+        tile = sensor_cor.get_rgb()
+        if tile == "preto":
+            print("[AVISO] Tile preto detectado! Parando motores.")
+            serial.send("MC 0 0 0 0")
+            time.sleep(0.5)
+
+            print(f"[AVISO] Recuando {avg_distance:.1f} cm de re...")
+            baseline_response_rev = serial.send("MR")
+            try:
+                baseline_rev = [float(v.strip()) for v in baseline_response_rev.split(",")]
+            except (ValueError, IndexError):
+                baseline_rev = [0.0, 0.0, 0.0, 0.0]
+
+            serial.send(f"MC -{speed} -{speed} -{speed} -{speed}")
+
+            while True:
+                response_rev = serial.send("MR")
+                try:
+                    values_rev = [float(v.strip()) for v in response_rev.split(",")]
+                    deltas_rev = [abs(v - b) for v, b in zip(values_rev, baseline_rev)]
+                    avg_distance_rev = sum(deltas_rev) / len(deltas_rev)
+                except (ValueError, IndexError):
+                    avg_distance_rev = 0.0
+
+                if avg_distance_rev >= avg_distance:
+                    break
+                time.sleep(DR_POLL_INTERVAL)
+
+            serial.send("MC 0 0 0 0")
+            return "BLACK"
 
         if avg_distance >= CELL_DISTANCE_CM:
             break
@@ -175,8 +210,6 @@ def move_forward(serial):
     # 3. Para motores
     serial.send("MC 0 0 0 0")
 
-    # Placeholder: deteccao de tiles pretos/azuis pelo sensor de chao
-    # TODO: implementar quando sensor de chao estiver ligado ao Raspberry Pi
     tile_response = "OK"
 
     return tile_response
@@ -359,13 +392,10 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 heading, response = move_to_direction(direcao, serial)
 
                 # Verifica resposta do ESP32
-                # TODO: ativar quando sensor de chao estiver implementado
                 if response == "BLACK":
-                    print(f"  [BLACK] Tile preto em ({prox_x}, {prox_y})!")
+                    print(f"  [BLACK] Tile preto em ({prox_x}, {prox_y})! O robo recuou de re.")
                     tiles_bloqueados.add((prox_x, prox_y))
-                    # Fisicamente voltar a celula anterior
-                    back_dir = direction_between((prox_x, prox_y), (atual_x, atual_y))
-                    heading, _ = move_to_direction(back_dir, serial)
+                    # A posicao no mapa nao e atualizada, e o tile fica marcado como bloqueado/parede
                     continue
 
                 elif response == "BLUE":
@@ -457,7 +487,7 @@ def main():
     )
 
     serial.send("MC 0 0 0 0")
-    time.sleep(3)
+    time.sleep(2)
     # Handshake — verifica conexão com ESP32 antes de tudo
     if not serial.ping():
         print("[FATAL] Não foi possível comunicar com o ESP32. A encerrar.")
