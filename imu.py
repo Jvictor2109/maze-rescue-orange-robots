@@ -90,7 +90,7 @@ class IMU:
         mx_cal = (mx - self.mag_offset[0]) * self.mag_scale[0]
         my_cal = (my - self.mag_offset[1]) * self.mag_scale[1]
 
-        raw_heading = -math.atan2(my_cal, mx_cal) * 180 / math.pi
+        raw_heading = math.atan2(my_cal, mx_cal) * 180 / math.pi
         self.maze_north_offset = raw_heading
         return True
 
@@ -105,7 +105,7 @@ class IMU:
         mx_cal = (mx - self.mag_offset[0]) * self.mag_scale[0]
         my_cal = (my - self.mag_offset[1]) * self.mag_scale[1]
 
-        raw_heading = -math.atan2(my_cal, mx_cal) * 180 / math.pi
+        raw_heading = math.atan2(my_cal, mx_cal) * 180 / math.pi
         # Aplica offset para alinhar 0deg com Norte do labirinto
         heading = (raw_heading - self.maze_north_offset) % 360
 
