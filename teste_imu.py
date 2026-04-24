@@ -64,7 +64,14 @@ def get_heading(mx, my):
     if heading < 0:
         heading += 360
 
-    pos = "nada"
+    if heading > 45 and heading <= 135:
+        pos = "Norte"
+    elif heading > 135 and heading <= 225:
+        pos = "Este"
+    elif heading > 225 and heading <= 315:
+        pos = "SUl"
+    else:
+        pos = "Oeste"
 
     return heading, pos
 
