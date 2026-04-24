@@ -8,6 +8,7 @@ Uso:
   Real:                      python main.py --port COM3
 """
 
+from multiprocessing import popen_fork
 import argparse
 import sys
 import time
@@ -45,7 +46,10 @@ DIRECTION_DELTA = {
 # Inverso: dado um delta, qual a direcao absoluta?
 DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 
-imu = IMU()
+imu = IMU(
+    mag_offset = (-0.8250, 14.1750),
+    mag_scale = (1.0576, 0.9484)
+)
 
 
 # =====================================================================
@@ -214,16 +218,13 @@ def turn_to(target_dir, serial):
 
     start = time.time()
     while pos != target_dir:
-        if time.time() - start > 5.0:
+        if time.time() - start > 10.0:
             print("[ERRO] Timeout no turn_to!")
             break
         _, pos = imu.get_heading()
         time.sleep(0.02)
 
     serial.send("MC 0 0 0 0")
-
-    
-
 
 
 
