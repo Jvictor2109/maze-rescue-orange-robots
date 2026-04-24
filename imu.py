@@ -76,7 +76,7 @@ class IMU:
         mx_cal = (mx - self.mag_offset[0]) * self.mag_scale[0]
         my_cal = (my - self.mag_offset[1]) * self.mag_scale[1]
 
-        heading = math.atan2(my_cal, mx_cal) * 180 / math.pi
+        heading = math.atan2(-my_cal, -mx_cal) * 180 / math.pi
         heading = heading % 360
 
         pos = int(heading // 90) % 4
