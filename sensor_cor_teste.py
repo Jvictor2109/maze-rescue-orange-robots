@@ -26,3 +26,4 @@ while True:
     rgb = s.get_rgb()
     print(f"Cor: {identificar_cor(s.get_rgb())}")
     print(f"r: {rgb[0]}, G:{rgb[1]}, B:{rgb[2]}")
+    time.sleep(5)
