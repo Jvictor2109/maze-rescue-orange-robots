@@ -23,7 +23,7 @@ WEST = 3
 # =====================================================================
 CELL_DISTANCE_CM = 30.0       # Distancia de uma celula em cm (encoder)
 WALL_THRESHOLD_CM = 15.0      # Distancia <= threshold = parede (ultrassonico)
-MOTOR_SPEED = 33     # Velocidade padrao dos motores
+MOTOR_SPEED = 35        # Velocidade padrao dos motores
 DR_POLL_INTERVAL = 0.01       # 10ms entre leituras de encoder para maior precisão
 
 # Convencao standard: N=+Y, E=+X, S=-Y, W=-X
@@ -108,16 +108,20 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
         ("SERVO RIGHT", "direita"),
     ]
 
+    # for servo_cmd, lado in servo_positions:
+    #     # Envia comando de servo e espera OK (confirma que o servo posicionou)
+    #     serial.send(servo_cmd)
+    #     time.sleep(1)
     #     # Captura um unico frame apos confirmacao
-    frame = camera.capture_array()
+    #     frame = camera.capture_array()
     #     cv2.imwrite("/home/litch/debug_frame.jpg", frame)
 
     #     # Deteccao de cor
-    cor, kits = color_detector.processar_frame(frame)
-    if cor:
-        print(f"  [COR] Vitima de COR detectada: {cor} - Kits: {kits}")
-        serial.send(f"VICTIM COLOR {cor}")
-        victims.append(("cor", cor, kits))
+    #     cor, kits = color_detector.processar_frame(frame)
+    #     if cor:
+    #         print(f"  [COR] Vitima de COR detectada ({lado}): {cor} - Kits: {kits}")
+    #         serial.send(f"VICTIM COLOR {cor}")
+    #         victims.append(("cor", cor, kits))
 
 
     #     # Deteccao de letra
@@ -143,7 +147,6 @@ def move_forward(serial):
     baseline_response = serial.send("MR")
     try:
         baseline = [float(v.strip()) for v in baseline_response.split(",")]
-        baseline.pop()
     except (ValueError, IndexError):
         print(f"[ERRO] Leitura base do encoder invalida: '{baseline_response}'")
         baseline = [0.0, 0.0, 0.0, 0.0]
@@ -158,7 +161,7 @@ def move_forward(serial):
         print(f"Inclinção: {inclination}")
         # Assumindo 178 como normal e ~170-174 como inclinado. Se for menor ou igual a 175, detecta rampa.
         # Caso o eixo de montagem esteja invertido, pode ser necessario ajustar para o eixo X na classe IMU.
-        if inclination is not None and inclination <= 175:
+        if inclination is not None and inclination <= 176:
             print(f"[RAMPA] Inclinação detectada: {inclination:.1f}º. Iniciando subida!")
             ramp_speed = 60 # Aumenta a velocidade para vencer a rampa
             serial.send(f"MC {ramp_speed} {ramp_speed} {ramp_speed} {ramp_speed}")
@@ -175,8 +178,6 @@ def move_forward(serial):
         response = serial.send("MR")
         try:
             values = [float(v.strip()) for v in response.split(",")]
-            values.pop()
-            print(values)
             # Distancia percorrida = leitura atual - leitura base
             deltas = [v - b for v, b in zip(values, baseline)]
             avg_distance = sum(deltas) / len(deltas)
@@ -206,41 +207,24 @@ def angle_diff(target, current):
     return diff
 
 
-def turn_to(current_dir, target_dir, serial):
-    if current_dir == target_dir:
-        return
-
+def turn_to(target_dir, serial):
     target_angle = DIRECTION_ANGLE[target_dir]
-    current_angle = DIRECTION_ANGLE[current_dir]
 
-    # Diferença teórica que precisamos rodar (ex: 90, -90, 180)
-    diff_teorica = angle_diff(target_angle, current_angle)
-
-    # Lê o ângulo inicial dos encoders via MR
-    start_enc_angle = None
-    for _ in range(5):
-        resp = serial.send("MR")
-        try:
-            parts = resp.split(",")
-            # O último valor do MR agora é o ângulo calculado no ESP32
-            start_enc_angle = float(parts[-1].strip())
-            break
-        except (ValueError, IndexError):
-            time.sleep(0.01)
-            
-    if start_enc_angle is None:
-        print("[ERRO] Não foi possível ler o ângulo do MR. Cancelando rotação.")
+    start_heading, _ = imu.get_heading()
+    if start_heading is None:
+        print("[ERRO] IMU sem leitura antes de virar!")
         return
 
-    # Calcula o ângulo desejado no referencial do encoder
-    target_enc_angle = start_enc_angle + diff_teorica
-    
-    # A diferença dita a direção (positivo = direita, negativo = esquerda)
-    diff_encoder = angle_diff(target_enc_angle, start_enc_angle)
-    turn_right = diff_encoder > 0
+    diff = angle_diff(target_angle, start_heading)
+    if abs(diff) <= TURN_TOLERANCE:
+        return
+
+    # Decide a direção de rotação UMA VEZ no início
+    # Restauramos o comando original: assumimos que MC -speed speed vira à DIREITA
+    turn_right = diff > 0
     speed = TURN_SPEED_FAST
     
-    start_time = time.time()
+    start = time.time()
     
     if turn_right:
         serial.send(f"MC -{speed} {speed} -{speed} {speed}")  # Virar direita
@@ -248,27 +232,24 @@ def turn_to(current_dir, target_dir, serial):
         serial.send(f"MC {speed} -{speed} {speed} -{speed}")  # Virar esquerda
 
     while True:
-        resp = serial.send("MR")
-        try:
-            parts = resp.split(",")
-            current_enc_angle = float(parts[-1].strip())
-        except (ValueError, IndexError):
+        heading_deg, _ = imu.get_heading()
+        if heading_deg is None:
             time.sleep(0.02)
             continue
             
-        current_diff = angle_diff(target_enc_angle, current_enc_angle)
+        current_diff = angle_diff(target_angle, heading_deg)
         
         # Condição de paragem 1: chegou ao alvo dentro da tolerância
         if abs(current_diff) <= TURN_TOLERANCE:
             break
             
-        # Condição de paragem 2: passou do alvo (evita oscilação infinita)
+        # Condição de paragem 2: o erro mudou de sinal, ou seja, já passámos do alvo (evita oscilação infinita)
         if turn_right and current_diff < 0:
             break
         if not turn_right and current_diff > 0:
             break
 
-        if time.time() - start_time > TURN_TIMEOUT:
+        if time.time() - start > TURN_TIMEOUT:
             print(f"[ERRO] Timeout no turn_to! diff={current_diff:.1f}deg")
             break
 
@@ -278,18 +259,26 @@ def turn_to(current_dir, target_dir, serial):
     serial.send("MC 0 0 0 0")
 
 
-def move_to_direction(current_dir, target_dir, serial):
+def move_to_direction(target_dir, serial):
+    # Lê a direção atual real
+    _, actual_cardinal = imu.get_heading()
+    if actual_cardinal is None:
+        actual_cardinal = target_dir  # fallback
+
     # Apenas roda se a direção cardinal alvo for diferente da atual
-    if current_dir != target_dir:
-        turn_to(current_dir, target_dir, serial)
+    if actual_cardinal != target_dir:
+        turn_to(target_dir, serial)
     else:
         print(f"  [INFO] Já virado para {DIRECTION_NAME[target_dir]}. Seguindo em frente.")
 
     # Avanca uma celula
     response = move_forward(serial)
 
-    # Retorna o novo heading (assume que rodou com sucesso)
-    return target_dir, response
+    # Retorna o heading REAL atualizado apos movimento
+    _, actual_cardinal = imu.get_heading()
+    if actual_cardinal is None:
+        actual_cardinal = target_dir
+    return actual_cardinal, response
 
 
 def direction_between(from_pos, to_pos):
@@ -386,7 +375,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 print(f"\n-> Avancando para {DIRECTION_NAME[direcao]} -> ({prox_x}, {prox_y})")
 
                 # Move o robo fisicamente
-                heading, response = move_to_direction(heading, direcao, serial)
+                heading, response = move_to_direction(direcao, serial)
 
                 # Verifica resposta do ESP32
                 # TODO: ativar quando sensor de chao estiver implementado
@@ -395,7 +384,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                     tiles_bloqueados.add((prox_x, prox_y))
                     # Fisicamente voltar a celula anterior
                     back_dir = direction_between((prox_x, prox_y), (atual_x, atual_y))
-                    heading, _ = move_to_direction(heading, back_dir, serial)
+                    heading, _ = move_to_direction(back_dir, serial)
                     continue
 
                 elif response == "BLUE":
@@ -428,7 +417,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 )
 
                 # Move fisicamente
-                heading, _ = move_to_direction(heading, target_dir, serial)
+                heading, _ = move_to_direction(target_dir, serial)
                 time.sleep(1)
 
     # -------------------------------------------------
