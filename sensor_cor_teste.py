@@ -9,7 +9,7 @@ s.set_sample_size(20)
 
 
 while True:
-    cor = s.get_cor()
+    cor = s.is_preto()
     print(f"Cor: {cor}")
     time.sleep(3)
 
