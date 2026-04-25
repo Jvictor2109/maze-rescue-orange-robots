@@ -264,7 +264,7 @@ if __name__ == "__main__":
    s.set_sample_size(20)
 
    # Determina ABSOLUTE_BLACK em laboratório e define aqui
-   s.ABSOLUTE_BLACK = 800
+   s.ABSOLUTE_BLACK = 11086
 
    try:
       while True:
