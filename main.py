@@ -42,10 +42,10 @@ DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 DIRECTION_ANGLE = {NORTH: 0.0, EAST: 90.0, SOUTH: 180.0, WEST: 270.0}
 
 # Constantes de controlo de rotacao
-TURN_TOLERANCE =5         # graus — para motores quando dentro desta margem
+TURN_TOLERANCE = 5         # graus — para motores quando dentro desta margem
 TURN_SLOW_ZONE = 30.0         # graus — reduz velocidade quando proximo do alvo
-TURN_SPEED_FAST = 25
-TURN_SPEED_SLOW = 18
+TURN_SPEED_FAST = 30
+TURN_SPEED_SLOW = 30
 TURN_TIMEOUT = 10.0           # segundos
 
 imu = IMU(
@@ -108,31 +108,31 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
         ("SERVO RIGHT", "direita"),
     ]
 
-    for servo_cmd, lado in servo_positions:
-        # Envia comando de servo e espera OK (confirma que o servo posicionou)
-        serial.send(servo_cmd)
-        time.sleep(1)
-        # Captura um unico frame apos confirmacao
-        frame = camera.capture_array()
-        cv2.imwrite("/home/litch/debug_frame.jpg", frame)
+    # for servo_cmd, lado in servo_positions:
+    #     # Envia comando de servo e espera OK (confirma que o servo posicionou)
+    #     serial.send(servo_cmd)
+    #     time.sleep(1)
+    #     # Captura um unico frame apos confirmacao
+    #     frame = camera.capture_array()
+    #     cv2.imwrite("/home/litch/debug_frame.jpg", frame)
 
-        # Deteccao de cor
-        cor, kits = color_detector.processar_frame(frame)
-        if cor:
-            print(f"  [COR] Vitima de COR detectada ({lado}): {cor} - Kits: {kits}")
-            serial.send(f"VICTIM COLOR {cor}")
-            victims.append(("cor", cor, kits))
+    #     # Deteccao de cor
+    #     cor, kits = color_detector.processar_frame(frame)
+    #     if cor:
+    #         print(f"  [COR] Vitima de COR detectada ({lado}): {cor} - Kits: {kits}")
+    #         serial.send(f"VICTIM COLOR {cor}")
+    #         victims.append(("cor", cor, kits))
 
 
-        # Deteccao de letra
-        letra = letter_detector.detect(frame)
-        if letra:
-            print(f"  [LETRA] Vitima de LETRA detectada ({lado}): {letra}")
-            serial.send(f"VICTIM LETTER {letra}")
-            victims.append(("letra", letra))
+    #     # Deteccao de letra
+    #     letra = letter_detector.detect(frame)
+    #     if letra:
+    #         print(f"  [LETRA] Vitima de LETRA detectada ({lado}): {letra}")
+    #         serial.send(f"VICTIM LETTER {letra}")
+    #         victims.append(("letra", letra))
 
-    # Recentra o servo
-    serial.send("SERVO CENTER")
+    # # Recentra o servo
+    # serial.send("SERVO CENTER")
 
     return victims
 
