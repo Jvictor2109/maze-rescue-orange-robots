@@ -42,9 +42,9 @@ DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 DIRECTION_ANGLE = {NORTH: 0.0, EAST: 90.0, SOUTH: 180.0, WEST: 270.0}
 
 # Constantes de controlo de rotacao
-TURN_TOLERANCE = 10         # graus — para motores quando dentro desta margem
+TURN_TOLERANCE =5         # graus — para motores quando dentro desta margem
 TURN_SLOW_ZONE = 30.0         # graus — reduz velocidade quando proximo do alvo
-TURN_SPEED_FAST = 30
+TURN_SPEED_FAST = 25
 TURN_SPEED_SLOW = 18
 TURN_TIMEOUT = 10.0           # segundos
 
