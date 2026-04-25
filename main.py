@@ -29,7 +29,7 @@ WEST = 3
 # =====================================================================
 CELL_DISTANCE_CM = 30.0       # Distancia de uma celula em cm (encoder)
 WALL_THRESHOLD_CM = 15.0      # Distancia <= threshold = parede (ultrassonico)
-MOTOR_SPEED = 35        # Velocidade padrao dos motores
+MOTOR_SPEED = 33        # Velocidade padrao dos motores
 DR_POLL_INTERVAL = 0.01       # 10ms entre leituras de encoder para maior precisão
 
 # Convencao standard: N=+Y, E=+X, S=-Y, W=-X
@@ -172,7 +172,7 @@ def move_forward(serial):
         print(f"Inclinção: {inclination}")
         # Assumindo 178 como normal e ~170-174 como inclinado. Se for menor ou igual a 175, detecta rampa.
         # Caso o eixo de montagem esteja invertido, pode ser necessario ajustar para o eixo X na classe IMU.
-        if inclination is not None and inclination <= 174:
+        if inclination is not None and inclination <= 172:
             print(f"[RAMPA] Inclinação detectada: {inclination:.1f}º. Iniciando subida!")
             ramp_speed = 60 # Aumenta a velocidade para vencer a rampa
             serial.send(f"MC {ramp_speed} {ramp_speed} {ramp_speed} {ramp_speed}")
