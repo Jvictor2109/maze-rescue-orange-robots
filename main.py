@@ -152,7 +152,8 @@ def move_forward(serial):
     speed = MOTOR_SPEED
     baseline_response = serial.send("MR")
     try:
-        baseline = [float(v.strip()) for v in baseline_response.split(",")]
+        # Apenas os primeiros 4 elementos são encoders (o 5º é o ângulo)
+        baseline = [float(v.strip()) for v in baseline_response.split(",")][:4]
     except (ValueError, IndexError):
         print(f"[ERRO] Leitura base do encoder invalida: '{baseline_response}'")
         baseline = [0.0, 0.0, 0.0, 0.0]
@@ -187,7 +188,8 @@ def move_forward(serial):
                 
         response = serial.send("MR")
         try:
-            values = [float(v.strip()) for v in response.split(",")]
+            # Apenas os primeiros 4 elementos são encoders (o 5º é o ângulo)
+            values = [float(v.strip()) for v in response.split(",")][:4]
             # Distancia percorrida = leitura atual - leitura base
             deltas = [v - b for v, b in zip(values, baseline)]
             avg_distance = sum(deltas) / len(deltas)

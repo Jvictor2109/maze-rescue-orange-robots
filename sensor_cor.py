@@ -253,6 +253,14 @@ class sensor(threading.Thread):
          samples = 50
       self._samples = samples
 
+   def is_preto(self):
+      hz = self.get_Hertz()
+
+      if hz[0]  > 6000 and hz[1] < 6000 and hz[2] < 6000:
+         return "preto"
+      else:
+         return "branco"
+
 
 if __name__ == "__main__":
 
@@ -274,11 +282,3 @@ if __name__ == "__main__":
    except KeyboardInterrupt:
       s.cancel()
       pi.stop()
-
-   def is_preto(self):
-      hz = self.get_Hertz()
-
-      if hz[0]  > 6000 and hz[1] < 6000 and hz[2] < 6000:
-         return "preto"
-      else:
-         return "branco"
