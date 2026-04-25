@@ -418,6 +418,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
 
                 # Move fisicamente
                 heading, _ = move_to_direction(target_dir, serial)
+                time.sleep(1)
 
     # -------------------------------------------------
     # FINALIZACAO
