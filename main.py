@@ -8,7 +8,13 @@ from imu import IMU
 from serial_comm import SerialComm
 from color_victims.teste2 import DetectorVitimas
 from letter_detector import LetterDetector
+import pigpio
+import sensor_cor as tcs 
 
+pi = pigpio.pi()
+s = tcs.sensor(pi, OUT=24, S2=22, S3=23, S0=4, S1=17, OE=18)
+s.set_frequency(2)       # escala 20%
+s.set_sample_size(20)
 
 # =====================================================================
 # CONSTANTES DE HEADING
@@ -42,7 +48,7 @@ DELTA_TO_DIR = {v: k for k, v in DIRECTION_DELTA.items()}
 DIRECTION_ANGLE = {NORTH: 0.0, EAST: 90.0, SOUTH: 180.0, WEST: 270.0}
 
 # Constantes de controlo de rotacao
-TURN_TOLERANCE = 5         # graus — para motores quando dentro desta margem
+TURN_TOLERANCE = 15         # graus — para motores quando dentro desta margem
 TURN_SLOW_ZONE = 30.0         # graus — reduz velocidade quando proximo do alvo
 TURN_SPEED_FAST = 30
 TURN_SPEED_SLOW = 30
@@ -113,15 +119,15 @@ def check_victims_in_cell(serial, camera, color_detector, letter_detector):
     #     serial.send(servo_cmd)
     #     time.sleep(1)
     #     # Captura um unico frame apos confirmacao
-    #     frame = camera.capture_array()
+    frame = camera.capture_array()
     #     cv2.imwrite("/home/litch/debug_frame.jpg", frame)
 
     #     # Deteccao de cor
-    #     cor, kits = color_detector.processar_frame(frame)
-    #     if cor:
-    #         print(f"  [COR] Vitima de COR detectada ({lado}): {cor} - Kits: {kits}")
-    #         serial.send(f"VICTIM COLOR {cor}")
-    #         victims.append(("cor", cor, kits))
+    cor, kits = color_detector.processar_frame(frame)
+    if cor:
+        print(f"  [COR] Vitima de COR detectada: {cor} - Kits: {kits}")
+        serial.send(f"VICTIM COLOR {cor}")
+        victims.append(("cor", cor, kits))
 
 
     #     # Deteccao de letra
@@ -156,6 +162,10 @@ def move_forward(serial):
 
     #  Poll encoders ate atingir distancia de uma celula
     while True:
+        # Verifica se tem tile preto
+        if s.is_preto() == "preto":
+            print(f"TILE PRETO!!")
+
         # Verifica se esta numa rampa
         inclination = imu.get_inclination()
         print(f"Inclinção: {inclination}")
