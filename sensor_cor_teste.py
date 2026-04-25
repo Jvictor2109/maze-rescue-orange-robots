@@ -12,3 +12,6 @@ while True:
     cor = s.get_cor()
     print(f"Cor: {cor}")
     time.sleep(3)
+
+    hertz = s.get_Hertz()
+    print(f"Hertz: {hertz}")

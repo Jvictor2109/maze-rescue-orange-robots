@@ -45,7 +45,7 @@ DIRECTION_ANGLE = {NORTH: 0.0, EAST: 90.0, SOUTH: 180.0, WEST: 270.0}
 TURN_TOLERANCE = 5         # graus — para motores quando dentro desta margem
 TURN_SLOW_ZONE = 30.0         # graus — reduz velocidade quando proximo do alvo
 TURN_SPEED_FAST = 30
-TURN_SPEED_SLOW = 30
+TURN_SPEED_SLOW = 22       # Velocidade reduzida para evitar overshoot
 TURN_TIMEOUT = 10.0           # segundos
 
 imu = IMU(
@@ -222,14 +222,9 @@ def turn_to(target_dir, serial):
     # Decide a direção de rotação UMA VEZ no início
     # Restauramos o comando original: assumimos que MC -speed speed vira à DIREITA
     turn_right = diff > 0
-    speed = TURN_SPEED_FAST
     
     start = time.time()
-    
-    if turn_right:
-        serial.send(f"MC -{speed} {speed} -{speed} {speed}")  # Virar direita
-    else:
-        serial.send(f"MC {speed} -{speed} {speed} -{speed}")  # Virar esquerda
+    current_speed = 0  # Variável de controlo para não enviar comandos repetidos
 
     while True:
         heading_deg, _ = imu.get_heading()
@@ -252,6 +247,17 @@ def turn_to(target_dir, serial):
         if time.time() - start > TURN_TIMEOUT:
             print(f"[ERRO] Timeout no turn_to! diff={current_diff:.1f}deg")
             break
+
+        # Define a velocidade atual com base na distância ao alvo (Desaceleração Proporcional)
+        target_speed = TURN_SPEED_SLOW if abs(current_diff) <= TURN_SLOW_ZONE else TURN_SPEED_FAST
+
+        # Apenas envia o comando serial se for necessário alterar a velocidade
+        if target_speed != current_speed:
+            if turn_right:
+                serial.send(f"MC -{target_speed} {target_speed} -{target_speed} {target_speed}")  # Virar direita
+            else:
+                serial.send(f"MC {target_speed} -{target_speed} {target_speed} -{target_speed}")  # Virar esquerda
+            current_speed = target_speed
 
         time.sleep(0.02)
 
