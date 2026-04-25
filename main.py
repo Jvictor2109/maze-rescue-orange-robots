@@ -217,24 +217,41 @@ def angle_diff(target, current):
     return diff
 
 
-def turn_to(target_dir, serial):
+def turn_to(current_dir, target_dir, serial):
+    if current_dir == target_dir:
+        return
+
     target_angle = DIRECTION_ANGLE[target_dir]
+    current_angle = DIRECTION_ANGLE[current_dir]
 
-    start_heading, _ = imu.get_heading()
-    if start_heading is None:
-        print("[ERRO] IMU sem leitura antes de virar!")
+    # Diferença teórica que precisamos rodar (ex: 90, -90, 180)
+    diff_teorica = angle_diff(target_angle, current_angle)
+
+    # Lê o ângulo inicial dos encoders via MR
+    start_enc_angle = None
+    for _ in range(5):
+        resp = serial.send("MR")
+        try:
+            parts = resp.split(",")
+            # O último valor do MR agora é o ângulo calculado no ESP32
+            start_enc_angle = float(parts[-1].strip())
+            break
+        except (ValueError, IndexError):
+            time.sleep(0.01)
+            
+    if start_enc_angle is None:
+        print("[ERRO] Não foi possível ler o ângulo do MR. Cancelando rotação.")
         return
 
-    diff = angle_diff(target_angle, start_heading)
-    if abs(diff) <= TURN_TOLERANCE:
-        return
-
-    # Decide a direção de rotação UMA VEZ no início
-    # Restauramos o comando original: assumimos que MC -speed speed vira à DIREITA
-    turn_right = diff > 0
+    # Calcula o ângulo desejado no referencial do encoder
+    target_enc_angle = start_enc_angle + diff_teorica
+    
+    # A diferença dita a direção (positivo = direita, negativo = esquerda)
+    diff_encoder = angle_diff(target_enc_angle, start_enc_angle)
+    turn_right = diff_encoder > 0
     speed = TURN_SPEED_FAST
     
-    start = time.time()
+    start_time = time.time()
     
     if turn_right:
         serial.send(f"MC -{speed} {speed} -{speed} {speed}")  # Virar direita
@@ -242,24 +259,27 @@ def turn_to(target_dir, serial):
         serial.send(f"MC {speed} -{speed} {speed} -{speed}")  # Virar esquerda
 
     while True:
-        heading_deg, _ = imu.get_heading()
-        if heading_deg is None:
+        resp = serial.send("MR")
+        try:
+            parts = resp.split(",")
+            current_enc_angle = float(parts[-1].strip())
+        except (ValueError, IndexError):
             time.sleep(0.02)
             continue
             
-        current_diff = angle_diff(target_angle, heading_deg)
+        current_diff = angle_diff(target_enc_angle, current_enc_angle)
         
         # Condição de paragem 1: chegou ao alvo dentro da tolerância
         if abs(current_diff) <= TURN_TOLERANCE:
             break
             
-        # Condição de paragem 2: o erro mudou de sinal, ou seja, já passámos do alvo (evita oscilação infinita)
+        # Condição de paragem 2: passou do alvo (evita oscilação infinita)
         if turn_right and current_diff < 0:
             break
         if not turn_right and current_diff > 0:
             break
 
-        if time.time() - start > TURN_TIMEOUT:
+        if time.time() - start_time > TURN_TIMEOUT:
             print(f"[ERRO] Timeout no turn_to! diff={current_diff:.1f}deg")
             break
 
@@ -269,26 +289,18 @@ def turn_to(target_dir, serial):
     serial.send("MC 0 0 0 0")
 
 
-def move_to_direction(target_dir, serial):
-    # Lê a direção atual real
-    _, actual_cardinal = imu.get_heading()
-    if actual_cardinal is None:
-        actual_cardinal = target_dir  # fallback
-
+def move_to_direction(current_dir, target_dir, serial):
     # Apenas roda se a direção cardinal alvo for diferente da atual
-    if actual_cardinal != target_dir:
-        turn_to(target_dir, serial)
+    if current_dir != target_dir:
+        turn_to(current_dir, target_dir, serial)
     else:
         print(f"  [INFO] Já virado para {DIRECTION_NAME[target_dir]}. Seguindo em frente.")
 
     # Avanca uma celula
     response = move_forward(serial)
 
-    # Retorna o heading REAL atualizado apos movimento
-    _, actual_cardinal = imu.get_heading()
-    if actual_cardinal is None:
-        actual_cardinal = target_dir
-    return actual_cardinal, response
+    # Retorna o novo heading (assume que rodou com sucesso)
+    return target_dir, response
 
 
 def direction_between(from_pos, to_pos):
@@ -385,7 +397,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 print(f"\n-> Avancando para {DIRECTION_NAME[direcao]} -> ({prox_x}, {prox_y})")
 
                 # Move o robo fisicamente
-                heading, response = move_to_direction(direcao, serial)
+                heading, response = move_to_direction(heading, direcao, serial)
 
                 # Verifica resposta do ESP32
                 # TODO: ativar quando sensor de chao estiver implementado
@@ -394,7 +406,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                     tiles_bloqueados.add((prox_x, prox_y))
                     # Fisicamente voltar a celula anterior
                     back_dir = direction_between((prox_x, prox_y), (atual_x, atual_y))
-                    heading, _ = move_to_direction(back_dir, serial)
+                    heading, _ = move_to_direction(heading, back_dir, serial)
                     continue
 
                 elif response == "BLUE":
@@ -427,7 +439,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 )
 
                 # Move fisicamente
-                heading, _ = move_to_direction(target_dir, serial)
+                heading, _ = move_to_direction(heading, target_dir, serial)
                 time.sleep(1)
 
     # -------------------------------------------------
