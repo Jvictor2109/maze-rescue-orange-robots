@@ -165,7 +165,41 @@ def move_forward(serial):
     while True:
         # Verifica se tem tile preto
         if s.is_preto() == "preto":
-            print(f"TILE PRETO!!")
+            print(f"[AVISO] Tile preto detectado! Parando motores.")
+            serial.send("MC 0 0 0 0")
+            time.sleep(0.5)
+            
+            resp = serial.send("MR")
+            try:
+                vals = [float(v.strip()) for v in resp.split(",")][:4]
+                dist_andada = sum([v - b for v, b in zip(vals, baseline)]) / len(vals)
+            except (ValueError, IndexError):
+                dist_andada = 0.0
+                
+            if dist_andada > 0:
+                print(f"[RECUO] Recuando {dist_andada:.1f} cm...")
+                rev_base_resp = serial.send("MR")
+                try:
+                    rev_base = [float(v.strip()) for v in rev_base_resp.split(",")][:4]
+                except (ValueError, IndexError):
+                    rev_base = [0.0, 0.0, 0.0, 0.0]
+                    
+                serial.send(f"MC -{speed} -{speed} -{speed} -{speed}")
+                
+                while True:
+                    r_resp = serial.send("MR")
+                    try:
+                        r_vals = [float(v.strip()) for v in r_resp.split(",")][:4]
+                        r_dist = sum([abs(v - b) for v, b in zip(r_vals, rev_base)]) / len(r_vals)
+                    except (ValueError, IndexError):
+                        r_dist = 0.0
+                        
+                    if r_dist >= dist_andada:
+                        break
+                    time.sleep(DR_POLL_INTERVAL)
+            
+            serial.send("MC 0 0 0 0")
+            return "BLACK"
 
         # Verifica se esta numa rampa
         inclination = imu.get_inclination()
@@ -406,9 +440,7 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 if response == "BLACK":
                     print(f"  [BLACK] Tile preto em ({prox_x}, {prox_y})!")
                     tiles_bloqueados.add((prox_x, prox_y))
-                    # Fisicamente voltar a celula anterior
-                    back_dir = direction_between((prox_x, prox_y), (atual_x, atual_y))
-                    heading, _ = move_to_direction(heading, back_dir, serial)
+                    # Robô já recuou na função move_forward, portanto mantemos o heading atual
                     continue
 
                 elif response == "BLUE":
