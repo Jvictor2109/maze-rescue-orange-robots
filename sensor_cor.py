@@ -269,8 +269,8 @@ if __name__ == "__main__":
    try:
       while True:
          time.sleep(0.2)
-         cor = s.get_cor()
-         print(f"Cor: {cor} | Hz: {s.get_Hertz()} | rolling_max: {s._rolling_max:.0f}")
+         hz = s.get_Hertz()
+         print(f"Total: {sum(hz):.0f} | R:{hz[0]:.0f} G:{hz[1]:.0f} B:{hz[2]:.0f}")
    except KeyboardInterrupt:
       s.cancel()
       pi.stop()
