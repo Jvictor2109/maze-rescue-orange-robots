@@ -176,6 +176,7 @@ def move_forward(serial):
         try:
             values = [float(v.strip()) for v in response.split(",")]
             values.pop()
+            print(values)
             # Distancia percorrida = leitura atual - leitura base
             deltas = [v - b for v, b in zip(values, baseline)]
             avg_distance = sum(deltas) / len(deltas)
