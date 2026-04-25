@@ -400,6 +400,8 @@ def explorar_labirinto(serial, camera=None, color_detector=None, letter_detector
                 victims = check_victims_in_cell(serial, camera, color_detector, letter_detector)
                 for v in victims:
                     vitimas_encontradas.append(((atual_x, atual_y), v))
+                    serial.send("VC")
+                    time.sleep(5)
             
             # 3. Montar opcoes livres (direcoes absolutas sem parede e nao visitadas)
             opcoes_livres = []
